@@ -20,10 +20,9 @@
 require_once( APP_GAMEMODULE_PATH.'module/table/table.game.php' );
 
 
-class Heartsla extends Table
-{
-	function __construct( )
-	{
+class Heartsla extends Table {
+
+	function __construct() {
         	
  
         // Your global variables labels:

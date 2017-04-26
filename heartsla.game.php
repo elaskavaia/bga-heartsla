@@ -22,7 +22,7 @@ require_once( APP_GAMEMODULE_PATH.'module/table/table.game.php' );
 
 class Heartsla extends Table
 {
-	function __construct\( )
+	function __construct( )
 	{
         	
  

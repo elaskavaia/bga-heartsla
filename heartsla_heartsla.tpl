@@ -31,7 +31,7 @@ This is your game interface. You can edit this HTML in your ".tpl" file.
 <div id="myhand_wrap" class="whiteblock">
     <h3>My Hand</h3>
     <div id="myhand">
-       <div class="cardontable"></div>
+       <div class="playertablecard"></div>
     </div>
 </div>
 

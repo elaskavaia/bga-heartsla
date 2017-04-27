@@ -47,9 +47,10 @@
 /********* You can start writing your CSS below this line: **********/
 
 
-/*** cards on table ***/
-
-.cardontable {
+.playertablecard {
+    display: inline-block;
+    position: relative;
+    margin-top: 5px;
     width: 72px;
     height: 96px;
     background-image: url('img/cards.jpg'); 

@@ -23,7 +23,7 @@ $gameinfos = array(
 'year' => 1850,                 
 
 // Game publisher
-'publisher' => 'Publie Domain',                     
+'publisher' => 'Public Domain',                     
 
 // Url of game publisher website
 'publisher_website' => '',   

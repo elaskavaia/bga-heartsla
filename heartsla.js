@@ -52,6 +52,7 @@ function (dojo, declare) {
             this.playerHand.create(this, $('myhand'), this.cardwidth, this.cardheight);
             this.playerHand.image_items_per_row = 13;
 
+            dojo.connect( this.playerHand, 'onChangeSelection', this, 'onPlayerHandSelectionChanged' );
 
             // Create cards types:
             for (var color = 1; color <= 4; color++) {
@@ -182,39 +183,42 @@ function (dojo, declare) {
         
         */
         
-        /* Example:
+
+        onPlayerHandSelectionChanged : function() {
+            var items = this.playerHand.getSelectedItems();
+
+            if (items.length > 0) {
+                if (this.checkAction('playCard', true)) {
+                    // Can play a card
+
+                    var card_id = items[0].id;
+
+                    console.log("on playCard "+card_id);
+
+                    this.playerHand.unselectAll();
+                } else if (this.checkAction('giveCards')) {
+                    // Can give cards => let the player select some cards
+                } else {
+                    this.playerHand.unselectAll();
+                }
+            }
+        },
         
-        onMyMethodToCall1: function( evt )
-        {
-            console.log( 'onMyMethodToCall1' );
-            
-            // Preventing default browser reaction
-            dojo.stopEvent( evt );
-
-            // Check that this action is possible (see "possibleactions" in states.inc.php)
-            if( ! this.checkAction( 'myAction' ) )
-            {   return; }
-
-            this.ajaxcall( "/heartsla/heartsla/myAction.html", { 
-                                                                    lock: true, 
-                                                                    myArgument1: arg1, 
-                                                                    myArgument2: arg2,
-                                                                    ...
-                                                                 }, 
-                         this, function( result ) {
-                            
-                            // What to do after the server call if it succeeded
-                            // (most of the time: nothing)
-                            
-                         }, function( is_error) {
-
-                            // What to do after the server call in anyway (success or failure)
-                            // (most of the time: nothing)
-
-                         } );        
-        },        
-        
-        */
+        /*
+         * Example:
+         * 
+         * onMyMethodToCall1: function( evt ) { console.log( 'onMyMethodToCall1' );
+         *  // Preventing default browser reaction dojo.stopEvent( evt );
+         *  // Check that this action is possible (see "possibleactions" in states.inc.php) if( ! this.checkAction( 'myAction' ) ) { return; }
+         * 
+         * this.ajaxcall( "/heartsla/heartsla/myAction.html", { lock: true, myArgument1: arg1, myArgument2: arg2, ... }, this, function(
+         * result ) {
+         *  // What to do after the server call if it succeeded // (most of the time: nothing)
+         *  }, function( is_error) {
+         *  // What to do after the server call in anyway (success or failure) // (most of the time: nothing)
+         *  } ); },
+         * 
+         */
 
         
         ///////////////////////////////////////////////////

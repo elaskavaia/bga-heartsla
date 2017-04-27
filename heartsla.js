@@ -18,17 +18,16 @@
 define([
     "dojo","dojo/_base/declare",
     "ebg/core/gamegui",
-    "ebg/counter"
+    "ebg/counter",
+    "ebg/stock"
 ],
 function (dojo, declare) {
     return declare("bgagame.heartsla", ebg.core.gamegui, {
         constructor: function(){
-            console.log('template constructor');
+            console.log('hearts constructor');
               
-            // Here, you can init the global variables of your user interface
-            // Example:
-            // this.myGlobalValue = 0;
-
+            this.cardwidth = 72;
+            this.cardheight = 96;
         },
         
         /*
@@ -44,21 +43,28 @@ function (dojo, declare) {
             "gamedatas" argument contains all datas retrieved by your "getAllDatas" PHP method.
         */
         
-        setup: function( gamedatas )
-        {
-            console.log( "Starting game setup" );
-            
-            // Setting up player boards
-            for( var player_id in gamedatas.players )
-            {
-                var player = gamedatas.players[player_id];
-                         
-                // TODO: Setting up players boards if needed
+
+        setup : function(gamedatas) {
+            console.log("Starting game setup");
+           
+            // Player hand
+            this.playerHand = new ebg.stock();
+            this.playerHand.create(this, $('myhand'), this.cardwidth, this.cardheight);
+            this.playerHand.image_items_per_row = 13;
+
+
+            // Create cards types:
+            for (var color = 1; color <= 4; color++) {
+                for (var value = 2; value <= 14; value++) {
+                    // Build card type id
+                    var card_type_id = this.getCardUniqueId(color, value);
+                    this.playerHand.addItemType(card_type_id, card_type_id, g_gamethemeurl + 'img/cards.jpg', card_type_id);
+                }
             }
             
-            // TODO: Set up your game interface here, according to "gamedatas"
+           // 2 - hears, 5 is 5, and 42 is card id, it normally would come from db
+            this.playerHand.addToStockWithId( this.getCardUniqueId( 2, 5 ), 42 );
             
- 
             // Setup game notifications to handle (see "setupNotifications" method below)
             this.setupNotifications();
 
@@ -157,7 +163,10 @@ function (dojo, declare) {
             script.
         
         */
-
+        // Get card unique identifier based on its color and value
+        getCardUniqueId : function(color, value) {
+            return (color - 1) * 13 + (value - 2);
+        },
 
         ///////////////////////////////////////////////////
         //// Player's action

@@ -45,7 +45,45 @@
 @import url(../../../css/csslayer.css); /* Note: you must not use any @import directive other than this one */
 
 /********* You can start writing your CSS below this line: **********/
+/** Table layout **/
 
+#playertables {
+    position: relative;
+    width: 710px;
+    height: 340px;
+}
+
+.playertablename {
+    font-weight: bold;
+}
+
+.playertable {
+    position: absolute;
+    text-align: center;
+    width: 180px;
+    height: 130px;
+}
+
+.playertable_N {
+    left: 50%;
+    top: 0px;
+    margin-left: -90px; /* half of 180 */
+}
+.playertable_S {
+    left: 50%;
+    bottom: 0px;
+    margin-left: -90px; /* half of 180 */
+}
+.playertable_W {
+    left: 0px;
+    top: 50%;
+    margin-top: -55px; /* half of 130 */
+}
+.playertable_E {
+    right: 0px;
+    top: 50%;
+    margin-top: -55px; /* half of 130 */
+}
 
 .playertablecard {
     display: inline-block;

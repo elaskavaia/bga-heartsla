@@ -250,6 +250,18 @@ class Heartsla extends Table {
             $best_value_player_id = self::activeNextPlayer(); // TODO figure out winner of trick
             $this->cards->moveAllCardsInLocation('cardsontable', 'cardswon', null, $best_value_player_id);
         
+            // Notify
+            // Note: we use 2 notifications here in order we can pause the display during the first notification
+            //  before we move all cards to the winner (during the second)
+            $players = self::loadPlayersBasicInfos();
+            self::notifyAllPlayers( 'trickWin', clienttranslate('${player_name} wins the trick'), array(
+                    'player_id' => $best_value_player_id,
+                    'player_name' => $players[ $best_value_player_id ]['player_name']
+            ) );
+            self::notifyAllPlayers( 'giveAllCardsToPlayer','', array(
+                    'player_id' => $best_value_player_id
+            ) );
+            
             if ($this->cards->countCardInLocation('hand') == 0) {
                 // End of the hand
                 $this->gamestate->nextState("endHand");

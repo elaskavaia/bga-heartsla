@@ -279,6 +279,10 @@ function (dojo, declare) {
 
             dojo.subscribe('newHand', this, "notif_newHand");
             dojo.subscribe('playCard', this, "notif_playCard");
+            
+            dojo.subscribe( 'trickWin', this, "notif_trickWin" );
+            this.notifqueue.setSynchronous( 'trickWin', 1000 );
+            dojo.subscribe( 'giveAllCardsToPlayer', this, "notif_giveAllCardsToPlayer" );
 
         },
 
@@ -297,6 +301,22 @@ function (dojo, declare) {
         notif_playCard : function(notif) {
             // Play a card on the table
             this.playCardOnTable(notif.args.player_id, notif.args.color, notif.args.value, notif.args.card_id);
+        },
+        
+
+        notif_trickWin : function(notif) {
+            // We do nothing here (just wait in order players can view the 4 cards played before they're gone.
+        },
+        notif_giveAllCardsToPlayer : function(notif) {
+            // Move all cards on table to given table, then destroy them
+            var winner_id = notif.args.player_id;
+            for ( var player_id in this.gamedatas.players) {
+                var anim = this.slideToObject('cardontable_' + player_id, 'overall_player_board_' + winner_id);
+                dojo.connect(anim, 'onEnd', function(node) {
+                    dojo.destroy(node);
+                });
+                anim.play();
+            }
         },
    });             
 });

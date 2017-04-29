@@ -110,9 +110,18 @@ class Heartsla extends Table {
         
         $this->cards->createCards( $cards, 'deck' );
        
+        
+        // Shuffle deck
+        $this->cards->shuffle('deck');
+        // Deal 13 cards to each players
+        $players = self::loadPlayersBasicInfos();
+        foreach ( $players as $player_id => $player ) {
+            $cards = $this->cards->pickCards(13, 'deck', $player_id);
+        } 
 
         // Activate first player (which is in general a good idea :) )
         $this->activeNextPlayer();
+
 
         /************ End of the game initialization *****/
     }
@@ -137,7 +146,11 @@ class Heartsla extends Table {
         $sql = "SELECT player_id id, player_score score FROM player ";
         $result['players'] = self::getCollectionFromDb( $sql );
   
-        // TODO: Gather all information about current game situation (visible by player $current_player_id).
+        // Cards in player hand
+        $result['hand'] = $this->cards->getCardsInLocation( 'hand', $current_player_id );
+        
+        // Cards played on the table
+        $result['cardsontable'] = $this->cards->getCardsInLocation( 'cardsontable' );
   
         return $result;
     }

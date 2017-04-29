@@ -63,8 +63,23 @@ function (dojo, declare) {
                 }
             }
             
-           // 2 - hears, 5 is 5, and 42 is card id, it normally would come from db
-            this.playerHand.addToStockWithId( this.getCardUniqueId( 2, 5 ), 42 );
+
+            // Cards in player's hand
+            for ( var i in this.gamedatas.hand) {
+                var card = this.gamedatas.hand[i];
+                var color = card.type;
+                var value = card.type_arg;
+                this.playerHand.addToStockWithId(this.getCardUniqueId(color, value), card.id);
+            }
+
+            // Cards played on table
+            for (i in this.gamedatas.cardsontable) {
+                var card = this.gamedatas.cardsontable[i];
+                var color = card.type;
+                var value = card.type_arg;
+                var player_id = card.location_arg;
+                this.playCardOnTable(player_id, color, value, card.id);
+            }
             
             // Setup game notifications to handle (see "setupNotifications" method below)
             this.setupNotifications();
@@ -168,20 +183,44 @@ function (dojo, declare) {
         getCardUniqueId : function(color, value) {
             return (color - 1) * 13 + (value - 2);
         },
+        
 
-        ///////////////////////////////////////////////////
-        //// Player's action
+        playCardOnTable : function(player_id, color, value, card_id) {
+            // player_id => direction
+            dojo.place(this.format_block('jstpl_cardontable', {
+                x : this.cardwidth * (value - 2),
+                y : this.cardheight * (color - 1),
+                player_id : player_id
+            }), 'playertablecard_' + player_id);
+
+            if (player_id != this.player_id) {
+                // Some opponent played a card
+                // Move card from player panel
+                this.placeOnObject('cardontable_' + player_id, 'overall_player_board_' + player_id);
+            } else {
+                // You played a card. If it exists in your hand, move card from there and remove
+                // corresponding item
+
+                if ($('myhand_item_' + card_id)) {
+                    this.placeOnObject('cardontable_' + player_id, 'myhand_item_' + card_id);
+                    this.playerHand.removeFromStockById(card_id);
+                }
+            }
+
+            // In any case: move it to its final destination
+            this.slideToObject('cardontable_' + player_id, 'playertablecard_' + player_id).play();
+        },
+
+        // /////////////////////////////////////////////////
+        // // Player's action
         
         /*
-        
-            Here, you are defining methods to handle player's action (ex: results of mouse click on 
-            game objects).
-            
-            Most of the time, these methods:
-            _ check the action is possible at this game state.
-            _ make a call to the game server
-        
-        */
+         * 
+         * Here, you are defining methods to handle player's action (ex: results of mouse click on game objects).
+         * 
+         * Most of the time, these methods: _ check the action is possible at this game state. _ make a call to the game server
+         * 
+         */
         
 
         onPlayerHandSelectionChanged : function() {
@@ -194,7 +233,14 @@ function (dojo, declare) {
                     var card_id = items[0].id;
 
                     console.log("on playCard "+card_id);
-
+                    // type is (color - 1) * 13 + (value - 2)
+                    var type = items[0].type;
+                    var color = Math.floor(type / 13) + 1;
+                    var value = type % 13 + 2;
+                    
+                    this.playCardOnTable(this.player_id,color,value,card_id);
+                    
+           
                     this.playerHand.unselectAll();
                 } else if (this.checkAction('giveCards')) {
                     // Can give cards => let the player select some cards

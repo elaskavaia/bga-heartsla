@@ -23,6 +23,7 @@ require_once(APP_GAMEMODULE_PATH . "module/table/table.game.php");
 class Game extends \Table
 {
     private static array $CARD_TYPES;
+    protected $cards;
 
     /**
      * Your global variables labels:
@@ -37,13 +38,14 @@ class Game extends \Table
     public function __construct()
     {
         parent::__construct();
+        $this->initGameStateLabels( array( 
+                         "currentHandType" => 10, 
+                         "trickColor" => 11, 
+                         "alreadyPlayedHearts" => 12,
+                          ) );
 
-        $this->initGameStateLabels([
-            "my_first_global_variable" => 10,
-            "my_second_global_variable" => 11,
-            "my_first_game_variant" => 100,
-            "my_second_game_variant" => 101,
-        ]);        
+        $this->cards = $this->getNew( "module.common.deck" );
+        $this->cards->init( "card" );
 
         self::$CARD_TYPES = [
             1 => [
@@ -278,9 +280,6 @@ class Game extends \Table
         $this->reloadPlayersBasicInfos();
 
         // Init global values with their initial values.
-
-        // Dummy content.
-        $this->setGameStateInitialValue("my_first_global_variable", 0);
 
         // Init game statistics.
         //

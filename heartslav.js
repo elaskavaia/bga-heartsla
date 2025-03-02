@@ -20,14 +20,18 @@ const DIRECTIONS = {
   4: ["S", "W", "N", "E"]
 };
 
-define(["dojo", "dojo/_base/declare", "ebg/core/gamegui", "ebg/counter"], function (dojo, declare) {
+define([
+  "dojo",
+  "dojo/_base/declare",
+  "ebg/core/gamegui",
+  "ebg/counter",
+  "ebg/stock" /// <==== HERE
+], function (dojo, declare) {
   return declare("bgagame.heartslav", ebg.core.gamegui, {
     constructor: function () {
-      console.log("heartslav constructor");
-
-      // Here, you can init the global variables of your user interface
-      // Example:
-      // this.myGlobalValue = 0;
+      console.log("hearts constructor");
+      this.cardwidth = 72;
+      this.cardheight = 96;
     },
 
     /*
@@ -88,6 +92,25 @@ define(["dojo", "dojo/_base/declare", "ebg/core/gamegui", "ebg/counter"], functi
       //   );
 
       // TODO: Set up your game interface here, according to "gamedatas"
+
+      // Player hand
+      this.playerHand = new ebg.stock(); // new stock object for hand
+      this.playerHand.create(this, $("myhand"), this.cardwidth, this.cardheight);
+      this.playerHand.image_items_per_row = 13; // 13 images per row
+
+      // Create cards types:
+      for (var color = 1; color <= 4; color++) {
+        for (var value = 2; value <= 14; value++) {
+          // Build card type id
+          var card_type_id = this.getCardUniqueId(color, value);
+          this.playerHand.addItemType(card_type_id, card_type_id, g_gamethemeurl + "img/cards.jpg", card_type_id);
+        }
+      }
+
+      dojo.connect(this.playerHand, "onChangeSelection", this, "onPlayerHandSelectionChanged");
+
+      // 2 = hearts, 5 is 5, and 42 is the card id, which normally would come from db
+      this.playerHand.addToStockWithId(this.getCardUniqueId(2, 5), 42);
 
       // Setup game notifications to handle (see "setupNotifications" method below)
       this.setupNotifications();
@@ -169,38 +192,30 @@ define(["dojo", "dojo/_base/declare", "ebg/core/gamegui", "ebg/counter"], functi
     ///////////////////////////////////////////////////
     //// Utility methods
 
-    /*
-        
-            Here, you can defines some utility methods that you can use everywhere in your javascript
-            script.
-        
-        */
-
+    // Get card unique identifier based on its color and value
+    getCardUniqueId: function (color, value) {
+      return (color - 1) * 13 + (value - 2);
+    },
     ///////////////////////////////////////////////////
     //// Player's action
 
-    /*
-        
-            Here, you are defining methods to handle player's action (ex: results of mouse click on 
-            game objects).
-            
-            Most of the time, these methods:
-            _ check the action is possible at this game state.
-            _ make a call to the game server
-        
-        */
+    onPlayerHandSelectionChanged: function () {
+      var items = this.playerHand.getSelectedItems();
 
-    // Example:
+      if (items.length > 0) {
+        if (this.checkAction("actPlayCard", true)) {
+          // Can play a card
 
-    onCardClick: function (card_id) {
-      console.log("onCardClick", card_id);
+          var card_id = items[0].id;
+          console.log("on playCard " + card_id);
 
-      this.bgaPerformAction("actPlayCard", {
-        card_id
-      }).then(() => {
-        // What to do after the server call if it succeeded
-        // (most of the time, nothing, as the game will react to notifs / change of state instead)
-      });
+          this.playerHand.unselectAll();
+        } else if (this.checkAction("actGiveCards")) {
+          // Can give cards => let the player select some cards
+        } else {
+          this.playerHand.unselectAll();
+        }
+      }
     },
 
     ///////////////////////////////////////////////////

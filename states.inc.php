@@ -49,55 +49,92 @@
 
 //    !! It is not a good idea to modify this file when a game is running !!
 
-
-$machinestates = [
+$machinestates = array(
 
     // The initial state. Please do not modify.
-
     1 => array(
         "name" => "gameSetup",
-        "description" => "",
+        "description" => clienttranslate("Game setup"),
         "type" => "manager",
         "action" => "stGameSetup",
-        "transitions" => ["" => 2]
+        "transitions" => array( "" => 2 )
     ),
+    
+    
+    /// New hand
+    2 => array(
+        "name" => "newHand",
+        "description" => "",
+        "type" => "game",
+        "action" => "stNewHand",
+        "updateGameProgression" => true,   
+        "transitions" => array( "" => 30 )
+    ),    
 
-    // Note: ID=2 => your first state
-
-    2 => [
+    21 => array(       
+        "name" => "giveCards",
+        "description" => clienttranslate('Some players must choose 3 cards to give to ${direction}'),
+        "descriptionmyturn" => clienttranslate('${you} must choose 3 cards to give to ${direction}'),
+        "type" => "multipleactiveplayer",
+        "action" => "stGiveCards",
+        "args" => "argGiveCards",
+        "possibleactions" => array( "actGiveCards" ),
+        "transitions" => array( "giveCards" => 22, "skip" => 22 )        
+    ), 
+    
+    22 => array(
+        "name" => "takeCards",
+        "description" => "",
+        "type" => "game",
+        "action" => "stTakeCards",
+        "transitions" => array( "startHand" => 30, "skip" => 30  )
+    ),        
+      
+    
+    // Trick
+    
+    30 => array(
+        "name" => "newTrick",
+        "description" => "",
+        "type" => "game",
+        "action" => "stNewTrick",
+        "transitions" => array( "" => 31 )
+    ),       
+    31 => array(
         "name" => "playerTurn",
-        "description" => clienttranslate('${actplayer} must play a card or pass'),
-        "descriptionmyturn" => clienttranslate('${you} must play a card or pass'),
+        "description" => clienttranslate('${actplayer} must play a card'),
+        "descriptionmyturn" => clienttranslate('${you} must play a card'),
         "type" => "activeplayer",
-        "args" => "argPlayerTurn",
-        "possibleactions" => [
-            // these actions are called from the front with bgaPerformAction, and matched to the function on the game.php file
-            "actPlayCard", 
-            "actPass",
-        ],
-        "transitions" => ["playCard" => 3, "pass" => 3]
-    ],
-
-    3 => [
+        "possibleactions" => array( "actPlayCard" ),
+        "transitions" => array( "playCard" => 32 )
+    ), 
+    32 => array(
         "name" => "nextPlayer",
-        "description" => '',
+        "description" => "",
         "type" => "game",
         "action" => "stNextPlayer",
-        "updateGameProgression" => true,
-        "transitions" => ["endGame" => 99, "nextPlayer" => 2]
-    ],
-
+        "transitions" => array( "nextPlayer" => 31, "nextTrick" => 30, "endHand" => 40 )
+    ), 
+    
+    
+    // End of the hand (scoring, etc...)
+    40 => array(
+        "name" => "endHand",
+        "description" => "",
+        "type" => "game",
+        "action" => "stEndHand",
+        "transitions" => array( "nextHand" => 2, "endGame" => 99 )
+    ),     
+   
     // Final state.
-    // Please do not modify (and do not overload action/args methods).
-    99 => [
+    // Please do not modify.
+    99 => array(
         "name" => "gameEnd",
         "description" => clienttranslate("End of game"),
         "type" => "manager",
         "action" => "stGameEnd",
         "args" => "argGameEnd"
-    ],
+    )
 
-];
-
-
+);
 

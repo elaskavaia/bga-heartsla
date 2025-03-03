@@ -188,16 +188,6 @@ define([
       if (this.isCurrentPlayerActive()) {
         switch (stateName) {
           case "playerTurn":
-            const playableCardsIds = args.playableCardsIds; // returned by the argPlayerTurn
-
-            // Add test action buttons in the action status bar, simulating a card click:
-            playableCardsIds.forEach((cardId) =>
-              this.statusBar.addActionButton(_("Play card with id ${card_id}").replace("${card_id}", cardId), () =>
-                this.onCardClick(cardId)
-              )
-            );
-
-            this.statusBar.addActionButton(_("Pass"), () => this.bgaPerformAction("actPass"), { color: "secondary" });
             break;
         }
       }
@@ -250,17 +240,13 @@ define([
       var items = this.playerHand.getSelectedItems();
 
       if (items.length > 0) {
-        if (this.checkAction("actPlayCard", true)) {
+        var action = "actPlayCard";
+        if (this.checkAction(action, true)) {
           // Can play a card
-
           var card_id = items[0].id;
-          console.log("on playCard " + card_id);
-          // type is (color - 1) * 13 + (value - 2)
-          var type = items[0].type;
-          var color = Math.floor(type / 13) + 1;
-          var value = type % 13 + 2;
-          
-          this.playCardOnTable(this.player_id,color,value,card_id);
+          this.bgaPerformAction(action, {
+            card_id: card_id
+          });
 
           this.playerHand.unselectAll();
         } else if (this.checkAction("actGiveCards")) {
@@ -274,46 +260,54 @@ define([
     ///////////////////////////////////////////////////
     //// Reaction to cometD notifications
 
-    /*
-            setupNotifications:
-            
-            In this method, you associate each of your game notifications with your local method to handle it.
-            
-            Note: game notification names correspond to "notifyAllPlayers" and "notifyPlayer" calls in
-                  your heartslav.game.php file.
-        
-        */
-    setupNotifications: function () {
-      console.log("notifications subscriptions setup");
+    setupNotifications : function() {
+        console.log('notifications subscriptions setup');
 
-      // TODO: here, associate your game notifications with local methods
+        // table of notif type to delay in milliseconds
+        const notifs = [
+            ['newHand', 1],
+            ['playCard', 100],
+            ['trickWin', 1000],
+            ['giveAllCardsToPlayer', 600],
+        ];
 
-      // Example 1: standard notification handling
-      // dojo.subscribe( 'cardPlayed', this, "notif_cardPlayed" );
+        notifs.forEach((notif) => {
+            dojo.subscribe(notif[0], this, `notif_${notif[0]}`);
+            this.notifqueue.setSynchronous(notif[0], notif[1]);
+        });
 
-      // Example 2: standard notification handling + tell the user interface to wait
-      //            during 3 seconds after calling the method in order to let the players
-      //            see what is happening in the game.
-      // dojo.subscribe( 'cardPlayed', this, "notif_cardPlayed" );
-      // this.notifqueue.setSynchronous( 'cardPlayed', 3000 );
-      //
-    }
+    },
 
-    // TODO: from this point and below, you can write your game notifications handling methods
+    notif_newHand : function(notif) {
+        // We received a new full hand of 13 cards.
+        this.playerHand.removeAll();
 
-    /*
-        Example:
-        
-        notif_cardPlayed: function( notif )
-        {
-            console.log( 'notif_cardPlayed' );
-            console.log( notif );
-            
-            // Note: notif.args contains the arguments specified during you "notifyAllPlayers" / "notifyPlayer" PHP call
-            
-            // TODO: play the card in the user interface.
-        },    
-        
-        */
+        for ( var i in notif.args.cards) {
+            var card = notif.args.cards[i];
+            var color = card.type;
+            var value = card.type_arg;
+            this.playerHand.addToStockWithId(this.getCardUniqueId(color, value), card.id);
+        }
+    },
+
+    notif_playCard : function(notif) {
+        // Play a card on the table
+        this.playCardOnTable(notif.args.player_id, notif.args.color, notif.args.value, notif.args.card_id);
+    },
+
+    notif_trickWin : function(notif) {
+        // We do nothing here (just wait in order players can view the 4 cards played before they're gone.
+    },
+    notif_giveAllCardsToPlayer : function(notif) {
+        // Move all cards on table to given table, then destroy them
+        var winner_id = notif.args.player_id;
+        for ( var player_id in this.gamedatas.players) {
+            var anim = this.slideToObject('cardontable_' + player_id, 'overall_player_board_' + winner_id);
+            dojo.connect(anim, 'onEnd', function(node) {
+                dojo.destroy(node);
+            });
+            anim.play();
+        }
+    },
   });
 });

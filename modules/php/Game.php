@@ -102,62 +102,17 @@ class Game extends \Table {
      *
      * @throws BgaUserException
      */
-    public function actPlayCard(int $card_id): void {
-        // Retrieve the active player ID.
-        $player_id = (int)$this->getActivePlayerId();
 
-        // check input values
-        $args = $this->argPlayerTurn();
-        $playableCardsIds = $args['playableCardsIds'];
-        if (!in_array($card_id, $playableCardsIds)) {
-            throw new \BgaUserException('Invalid card choice');
-        }
-
-        // Add your game logic to play a card here.
-        $card_name = self::$CARD_TYPES[$card_id]['card_name'];
-
-        // Notify all players about the card played.
-        $this->notify->all("cardPlayed", clienttranslate('${player_name} plays ${card_name}'), [
-            "player_id" => $player_id,
-            "player_name" => $this->getActivePlayerName(), // remove this line if you uncomment notification decorator
-            "card_name" => $card_name, // remove this line if you uncomment notification decorator
-            "card_id" => $card_id,
-            "i18n" => ['card_name'], // remove this line if you uncomment notification decorator
-        ]);
-
-        // at the end of the action, move to the next state
-        $this->gamestate->nextState("playCard");
+     function actPlayCard(int $card_id) {
+        $player_id = $this->getActivePlayerId();
+        throw new \BgaUserException($this->_("Not implemented: ") . "$player_id plays $card_id");
     }
 
-    public function actPass(): void {
-        // Retrieve the active player ID.
-        $player_id = (int)$this->getActivePlayerId();
 
-        // Notify all players about the choice to pass.
-        $this->notify->all("pass", clienttranslate('${player_name} passes'), [
-            "player_id" => $player_id,
-            "player_name" => $this->getActivePlayerName(), // remove this line if you uncomment notification decorator
-        ]);
-
-        // at the end of the action, move to the next state
-        $this->gamestate->nextState("pass");
+    function argGiveCards() {
+        return [];
     }
 
-    /**
-     * Game state arguments, example content.
-     *
-     * This method returns some additional information that is very specific to the `playerTurn` game state.
-     *
-     * @return array
-     * @see ./states.inc.php
-     */
-    public function argPlayerTurn(): array {
-        // Get some values from the current game situation from the database.
-
-        return [
-            "playableCardsIds" => [1, 2],
-        ];
-    }
 
     /**
      * Compute and return the current game progression.
@@ -180,20 +135,56 @@ class Game extends \Table {
      *
      * The action method of state `nextPlayer` is called everytime the current game state is set to `nextPlayer`.
      */
-    public function stNextPlayer(): void {
-        // Retrieve the active player ID.
-        $player_id = (int)$this->getActivePlayerId();
-
-        // Give some extra time to the active player when he completed an action
-        $this->giveExtraTime($player_id);
-
-        $this->activeNextPlayer();
-
-        // Go to another gamestate
-        // Here, we would detect if the game is over, and in this case use "endGame" transition instead 
-        $this->gamestate->nextState("nextPlayer");
+    function stNewHand() {
+        // Take back all cards (from any location => null) to deck
+        $this->cards->moveAllCardsInLocation(null, "deck");
+        $this->cards->shuffle('deck');
+        // Deal 13 cards to each players
+        // Create deck, shuffle it and give 13 initial cards
+        $players = $this->loadPlayersBasicInfos();
+        foreach ( $players as $player_id => $player ) {
+            $cards = $this->cards->pickCards(13, 'deck', $player_id);
+            // Notify player about his cards
+            $this->notify->player($player_id, 'newHand', '', array ('cards' => $cards ));
+        }
+        $this->setGameStateValue('alreadyPlayedHearts', 0);
+        $this->gamestate->nextState("");
     }
 
+    function stNewTrick() {
+        // New trick: active the player who wins the last trick, or the player who own the club-2 card
+        // Reset trick color to 0 (= no color)
+        $this->setGameStateInitialValue('trickColor', 0);
+        $this->gamestate->nextState();
+    }
+
+    function stNextPlayer() {
+        // Active next player OR end the trick and go to the next trick OR end the hand
+        if ($this->cards->countCardInLocation('cardsontable') == 4) {
+            // This is the end of the trick
+            // Move all cards to "cardswon" of the given player
+            $best_value_player_id = $this->activeNextPlayer(); // TODO figure out winner of trick
+            $this->cards->moveAllCardsInLocation('cardsontable', 'cardswon', null, $best_value_player_id);
+        
+            if ($this->cards->countCardInLocation('hand') == 0) {
+                // End of the hand
+                $this->gamestate->nextState("endHand");
+            } else {
+                // End of the trick
+                $this->gamestate->nextState("nextTrick");
+            }
+        } else {
+            // Standard case (not the end of the trick)
+            // => just active the next player
+            $player_id = $this->activeNextPlayer();
+            $this->giveExtraTime($player_id);
+            $this->gamestate->nextState('nextPlayer');
+        }
+    }
+
+    function stEndHand() {
+        $this->gamestate->nextState("nextHand");
+    }
     /**
      * Migrate database.
      *

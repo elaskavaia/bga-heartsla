@@ -1,4 +1,5 @@
 <?php
+
 /**
  *------
  * BGA framework: Gregory Isabelli & Emmanuel Colin & BoardGameArena
@@ -14,16 +15,17 @@
  *
  * In this PHP file, you are going to defines the rules of the game.
  */
+
 declare(strict_types=1);
 
 namespace Bga\Games\heartslav;
 
 require_once(APP_GAMEMODULE_PATH . "module/table/table.game.php");
 
-class Game extends \Table
-{
+class Game extends \Table {
+    private $cards;
+    private static array $CARD_SUITS;
     private static array $CARD_TYPES;
-    protected $cards;
 
     /**
      * Your global variables labels:
@@ -35,28 +37,47 @@ class Game extends \Table
      * NOTE: afterward, you can get/set the global variables with `getGameStateValue`, `setGameStateInitialValue` or
      * `setGameStateValue` functions.
      */
-    public function __construct()
-    {
+    public function __construct() {
         parent::__construct();
-        $this->initGameStateLabels( array( 
-                         "currentHandType" => 10, 
-                         "trickColor" => 11, 
-                         "alreadyPlayedHearts" => 12,
-                          ) );
+        $this->initGameStateLabels(array(
+            "currentHandType" => 10,
+            "trickColor" => 11,
+            "alreadyPlayedHearts" => 12,
+        ));
 
-        $this->cards = $this->getNew( "module.common.deck" );
-        $this->cards->init( "card" );
+        $this->cards = $this->getNew("module.common.deck");
+        $this->cards->init("card");
 
-        self::$CARD_TYPES = [
+        self::$CARD_SUITS = [
             1 => [
-                "card_name" => clienttranslate('Troll'), // ...
+                'name' => clienttranslate('Spade'),
             ],
             2 => [
-                "card_name" => clienttranslate('Goblin'), // ...
+                'name' => clienttranslate('Heart'),
             ],
-            // ...
+            3 => [
+                'name' => clienttranslate('Club'),
+            ],
+            4 => [
+                'name' => clienttranslate('Diamond'),
+            ]
         ];
 
+        self::$CARD_TYPES = [
+            2 => ['name' => '2'],
+            3 => ['name' => '3'],
+            4 => ['name' => '4'],
+            5 => ['name' => '5'],
+            6 => ['name' => '6'],
+            7 => ['name' => '7'],
+            8 => ['name' => '8'],
+            9 => ['name' => '9'],
+            10 => ['name' => '10'],
+            11 => ['name' => clienttranslate('J')],
+            12 => ['name' => clienttranslate('Q')],
+            13 => ['name' => clienttranslate('K')],
+            14 => ['name' => clienttranslate('A')]
+        ];
         /* example of notification decorator.
         // automatically complete notification args when needed
         $this->notify->addDecorator(function(string $message, array $args) {
@@ -81,8 +102,7 @@ class Game extends \Table
      *
      * @throws BgaUserException
      */
-    public function actPlayCard(int $card_id): void
-    {
+    public function actPlayCard(int $card_id): void {
         // Retrieve the active player ID.
         $player_id = (int)$this->getActivePlayerId();
 
@@ -109,8 +129,7 @@ class Game extends \Table
         $this->gamestate->nextState("playCard");
     }
 
-    public function actPass(): void
-    {
+    public function actPass(): void {
         // Retrieve the active player ID.
         $player_id = (int)$this->getActivePlayerId();
 
@@ -132,8 +151,7 @@ class Game extends \Table
      * @return array
      * @see ./states.inc.php
      */
-    public function argPlayerTurn(): array
-    {
+    public function argPlayerTurn(): array {
         // Get some values from the current game situation from the database.
 
         return [
@@ -151,8 +169,7 @@ class Game extends \Table
      * @return int
      * @see ./states.inc.php
      */
-    public function getGameProgression()
-    {
+    public function getGameProgression() {
         // TODO: compute and return the game progression
 
         return 0;
@@ -169,7 +186,7 @@ class Game extends \Table
 
         // Give some extra time to the active player when he completed an action
         $this->giveExtraTime($player_id);
-        
+
         $this->activeNextPlayer();
 
         // Go to another gamestate
@@ -188,23 +205,22 @@ class Game extends \Table
      * @param int $from_version
      * @return void
      */
-    public function upgradeTableDb($from_version)
-    {
-//       if ($from_version <= 1404301345)
-//       {
-//            // ! important ! Use DBPREFIX_<table_name> for all tables
-//
-//            $sql = "ALTER TABLE DBPREFIX_xxxxxxx ....";
-//            $this->applyDbUpgradeToAllDB( $sql );
-//       }
-//
-//       if ($from_version <= 1405061421)
-//       {
-//            // ! important ! Use DBPREFIX_<table_name> for all tables
-//
-//            $sql = "CREATE TABLE DBPREFIX_xxxxxxx ....";
-//            $this->applyDbUpgradeToAllDB( $sql );
-//       }
+    public function upgradeTableDb($from_version) {
+        //       if ($from_version <= 1404301345)
+        //       {
+        //            // ! important ! Use DBPREFIX_<table_name> for all tables
+        //
+        //            $sql = "ALTER TABLE DBPREFIX_xxxxxxx ....";
+        //            $this->applyDbUpgradeToAllDB( $sql );
+        //       }
+        //
+        //       if ($from_version <= 1405061421)
+        //       {
+        //            // ! important ! Use DBPREFIX_<table_name> for all tables
+        //
+        //            $sql = "CREATE TABLE DBPREFIX_xxxxxxx ....";
+        //            $this->applyDbUpgradeToAllDB( $sql );
+        //       }
     }
 
     /*
@@ -215,8 +231,7 @@ class Game extends \Table
      * - when the game starts
      * - when a player refreshes the game page (F5)
      */
-    protected function getAllDatas(): array
-    {
+    protected function getAllDatas(): array {
         $result = [];
 
         // WARNING: We must only return information visible by the current player.
@@ -229,6 +244,11 @@ class Game extends \Table
         );
 
         // TODO: Gather all information about current game situation (visible by player $current_player_id).
+        // Cards in player hand
+        $result['hand'] = $this->cards->getCardsInLocation('hand', $current_player_id);
+
+        // Cards played on the table
+        $result['cardsontable'] = $this->cards->getCardsInLocation('cardsontable');
 
         return $result;
     }
@@ -238,8 +258,7 @@ class Game extends \Table
      *
      * IMPORTANT: Please do not modify.
      */
-    protected function getGameName()
-    {
+    protected function getGameName() {
         return "heartslav";
     }
 
@@ -247,8 +266,7 @@ class Game extends \Table
      * This method is called only once, when a new game is launched. In this method, you must setup the game
      *  according to the game rules, so that the game is ready to be played.
      */
-    protected function setupNewGame($players, $options = [])
-    {
+    protected function setupNewGame($players, $options = []) {
         // Set the colors of the players with HTML color code. The default below is red/green/blue/orange/brown. The
         // number of colors defined here must correspond to the maximum number of players allowed for the gams.
         $gameinfos = $this->getGameinfos();
@@ -281,6 +299,19 @@ class Game extends \Table
 
         // Init global values with their initial values.
 
+
+        // Note: hand types: 0 = give 3 cards to player on the left
+        //                   1 = give 3 cards to player on the right
+        //                   2 = give 3 cards to player opposite
+        //                   3 = keep cards
+        $this->setGameStateInitialValue('currentHandType', 0);
+
+        // Set current trick color to zero (= no trick color)
+        $this->setGameStateInitialValue('trickColor', 0);
+
+        // Mark if we already played hearts during this hand
+        $this->setGameStateInitialValue('alreadyPlayedHearts', 0);
+
         // Init game statistics.
         //
         // NOTE: statistics used in this file must be defined in your `stats.inc.php` file.
@@ -290,6 +321,26 @@ class Game extends \Table
         // $this->initStat("player", "player_teststat1", 0);
 
         // TODO: Setup the initial game situation here.
+
+        // Create cards
+        $cards = [];
+        foreach (self::$CARD_SUITS as $suit => $suit_info) {
+            // spade, heart, diamond, club
+            foreach (self::$CARD_TYPES as $value => $info_value) {
+                //  2, 3, 4, ... K, A
+                $cards[] = ['type' => $suit, 'type_arg' => $value, 'nbr' => 1];
+            }
+        }
+
+        $this->cards->createCards($cards, 'deck');
+
+        // Shuffle deck
+        $this->cards->shuffle('deck');
+        // Deal 13 cards to each players
+        $players = $this->loadPlayersBasicInfos();
+        foreach ($players as $player_id => $player) {
+            $cards = $this->cards->pickCards(13, 'deck', $player_id);
+        }
 
         // Activate first player once everything has been initialized and ready.
         $this->activeNextPlayer();
@@ -311,17 +362,15 @@ class Game extends \Table
      * @return void
      * @throws feException if the zombie mode is not supported at this game state.
      */
-    protected function zombieTurn(array $state, int $active_player): void
-    {
+    protected function zombieTurn(array $state, int $active_player): void {
         $state_name = $state["name"];
 
         if ($state["type"] === "activeplayer") {
             switch ($state_name) {
-                default:
-                {
-                    $this->gamestate->nextState("zombiePass");
-                    break;
-                }
+                default: {
+                        $this->gamestate->nextState("zombiePass");
+                        break;
+                    }
             }
 
             return;

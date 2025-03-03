@@ -269,6 +269,7 @@ define([
             ['playCard', 100],
             ['trickWin', 1000],
             ['giveAllCardsToPlayer', 600],
+            ['newScores', 1],
         ];
 
         notifs.forEach((notif) => {
@@ -307,6 +308,12 @@ define([
                 dojo.destroy(node);
             });
             anim.play();
+        }
+    },
+    notif_newScores : function(notif) {
+        // Update players' scores
+        for ( var player_id in notif.args.newScores) {
+            this.scoreCtrl[player_id].toValue(notif.args.newScores[player_id]);
         }
     },
   });

@@ -49,24 +49,14 @@
 /********* You can start writing your CSS below this line: **********/
 
 
-/*
-    Example of CSS sprites (a black token and a white token, 20x20px each, embedded in the same "tokens.png" 40x20px image):
-
-    .white_token {
-        background-image: url('img/tokens.png');
-        background-position: 0px 0px;
-    }
-    .black_token {
-        background-image: url('img/tokens.png');
-        background-position: -20px 0px;
-    }
-    .token {
-        width: 20px;
-        height: 20px;
-        background-repeat: none;
-    }
-*/
-
-
-
+.playertablecard {
+    display: inline-block;
+    position: relative;
+    margin-top: 5px;
+    border-radius: 5%;
+    width: 100px;
+    height: 135px;
+    background-size: calc(100px * 15);
+    background-image: url('img/cards.jpg'); /* temp hack to see it */
+}
 

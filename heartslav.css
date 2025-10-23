@@ -42,21 +42,70 @@
            Consequently, don't hesitate to put as many comments as necessary.
 */
 
-
 /* Note: you must not use any @import directive */
-
 
 /********* You can start writing your CSS below this line: **********/
 
+/** Table layout **/
 
-.playertablecard {
-    display: inline-block;
-    position: relative;
-    margin-top: 5px;
-    border-radius: 5%;
-    width: 100px;
-    height: 135px;
-    background-size: calc(100px * 15);
-    background-image: url('img/cards.jpg'); /* temp hack to see it */
+:root {
+  --h-card-width: 100px;
+  --h-card-height: 135px;
+  --h-tableau-width: 180px;
+  --h-tableau-height: 180px;
 }
 
+#player-tables {
+  position: relative;
+  width: calc(var(--h-tableau-width) * 3.8);
+  height: calc(var(--h-tableau-height) * 2.4);
+}
+
+.playertablename {
+  font-weight: bold;
+}
+
+.playertable {
+  position: absolute;
+  text-align: center;
+  width: var(--h-tableau-width);
+  height: var(--h-tableau-height);
+}
+
+.playertable_0 {
+  top: 0px;
+  left: 50%;
+  margin-left: calc(var(--h-tableau-width) / 2 * -1);
+}
+
+.playertable_1 {
+  left: 0px;
+  top: 50%;
+  margin-top: calc(var(--h-tableau-height) / 2 * -1);
+}
+.playertable_2 {
+  right: 0px;
+  top: 50%;
+  margin-top: calc(var(--h-tableau-height) / 2 * -1);
+}
+.playertable_3 {
+  bottom: 0px;
+  left: 50%;
+  margin-left: calc(var(--h-tableau-width) / 2 * -1);
+}
+
+.ha-card-front {
+  background-size: calc(100px * 15);
+  background-image: url("img/cards.jpg");
+}
+
+.fakecard {
+  display: inline-block;
+  position: relative;
+  margin-top: 5px;
+  border-radius: 5%;
+  width: 100px;
+  height: 135px;
+  background-size: calc(100px * 15);
+  background-image: url("img/cards.jpg"); /* temp hack to see it */
+}

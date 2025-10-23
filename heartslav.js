@@ -15,17 +15,14 @@
  *
  */
 
- const DIRECTIONS = {
-    3: ['S', 'W', 'E'],
-    4: ['S', 'W', 'N', 'E'],
-};
-
 define([
   "dojo",
   "dojo/_base/declare",
   "ebg/core/gamegui",
   "ebg/counter",
-], function (dojo, declare, gamegui, counter) {
+  getLibUrl("bga-animations", "1.x"), // the lib uses bga-animations so this is required!
+  getLibUrl("bga-cards", "1.x"),
+], function (dojo, declare, gamegui, counter, BgaAnimations, BgaCards) {
   return declare("bgagame.heartslav", ebg.core.gamegui, {
     constructor: function () {
       console.log("heartslav constructor");
@@ -57,13 +54,12 @@ define([
                 <div id="myhand_wrap" class="whiteblock">
                     <b id="myhand_label">${_("My hand")}</b>
                     <div id="myhand">
-                           <div class="playertablecard"></div>
+                       
                     </div>
                 </div>
 
             `
       );
-
       // Example to add a div on the game area
       this.getGameAreaElement().insertAdjacentHTML(
         "beforeend",
@@ -71,20 +67,73 @@ define([
                 <div id="player-tables"></div>
             `
       );
-
+      //<span class="dealer_token" id="dealer_token_p${player.id}">🃏 </span>
       // Setting up player boards
-      var numPlayers = Object.keys(gamedatas.players).length;
+      const numPlayers = Object.keys(gamedatas.players).length;
       Object.values(gamedatas.players).forEach((player, index) => {
         document.getElementById("player-tables").insertAdjacentHTML(
           "beforeend",
+          // we generate this html snippet for each player
           `
-    <div class="playertable whiteblock playertable_${DIRECTIONS[numPlayers][index]}">
-        <div class="playertablename" style="color:#${player.color};"><span class="dealer_token" id="dealer_token_p${player.id}">🃏 </span>${player.name}</div>
-        <div class="playertablecard" id="playertablecard_${player.id}"></div>
-        <div class="playertablename" id="hand_score_wrap_${player.id}"><span class="hand_score_label"></span> <span id="hand_score_${player.id}"></span></div>
+    <div class="playertable whiteblock playertable_${index}">
+        <div class="playertablename" style="color:#${player.color};">${player.name}</div>
+        <div id="tableau_${player.id}"></div>
     </div>
-                `
+    `
         );
+      });
+
+      // create the animation manager, and bind it to the `game.bgaAnimationsActive()` function
+      this.animationManager = new BgaAnimations.Manager({
+        animationsActive: () => this.bgaAnimationsActive(),
+      });
+
+      const cardWidth = 100;
+      const cardHeight = 135;
+
+      // create the card manager
+      this.cardsManager = new BgaCards.Manager({
+        animationManager: this.animationManager,
+        type: "ha-card",
+        getId: (card) => card.id,
+
+        cardWidth: cardWidth,
+        cardHeight: cardHeight,
+        cardBorderRadius: "5%",
+        setupFrontDiv: (card, div) => {
+          div.dataset.type = card.type; // suit 1..4
+          div.dataset.typeArg = card.type_arg; // value 2..14
+          div.style.backgroundPositionX = `calc(100% / 14 * (${card.type_arg} - 2))`; // 14 is number of columns in stock image minus 1
+          div.style.backgroundPositionY = `calc(100% / 3 * (${card.type} - 1))`; // 3 is number of rows in stock image minus 1
+          this.addTooltipHtml(div.id, `tooltip of ${card.type}`);
+        },
+      });
+
+      // create the stock, in the game setup
+      this.handStock = new BgaCards.HandStock(
+        this.cardsManager,
+        document.getElementById("myhand")
+      );
+          // TODO: fix
+      this.handStock.addCards([
+        { id: 1, type: 2, type_arg: 4 }, // 4 of hearts
+        { id: 2, type: 3, type_arg: 11 }, // Jack of clubs
+      ]); 
+
+      // map stocks
+
+      this.tableauStocks = [];
+      Object.values(gamedatas.players).forEach((player, index) => {
+        // add player tableau stock
+        const stock = new BgaCards.LineStock(
+          this.cardsManager,
+          document.getElementById(`tableau_${player.id}`)
+        );
+        this.tableauStocks[player.id] = stock;
+        // TODO: fix
+        stock.addCards([
+          { id: index + 10, type: index + 1, type_arg: index + 2 },
+        ]);
       });
 
       // TODO: Set up your game interface here, according to "gamedatas"

@@ -1,0 +1,1256 @@
+{{Studio_Framework_Navigation}}
+
+<big>'''WARNING''': The tutorial is being re-written - some stuff may not work. Please do not edit this page while this banner is on.</big>
+
+== Introduction ==
+
+Using this tutorial, you can build a complete working game on the BGA environment: Hearts.
+
+Before you read this tutorial, you must:
+* Read the overall presentations of the BGA Framework ([[Studio|see here]]).
+* Know the rules for Hearts
+* Some-what know the languages used on BGA: PHP, SQL, HTML, CSS, Javascript
+* Set up your development environment [http://en.doc.boardgamearena.com/First_steps_with_BGA_Studio First Steps with BGA Studio]
+* As part of setup you have to have access to your ftp home folder in studio, which would have the full 'hearts' game source code. We will be using some resources of this game in this tutorial, so copy it over to local disk if you have not done so.
+
+If you are stuck or have question about this tutorial, post on [https://forum.boardgamearena.com/viewforum.php?f=12 BGA Developers forum]
+
+== Create your first game ==
+
+If you have not already, you have to create a project in BGA Studio. For this tutorial you can create a project heartsYOURNAME where
+YOURNAME is your developer login name. You can also re-use the project you have created for the "First Steps" tutorial above.
+
+<i>Note: please do '''not''' use the hearts project code as a base. This tutorial assumes you started with a TEMPLATE project with no prior modifications. Using the hearts project as a base will be very confusing and you won't be able to follow all the steps.
+</i>
+
+
+With the initial skeleton of code provided, you can already start a game from the BGA Studio. 
+
+1. Find and express start the game in turn-based mode with 4 players. Make sure it works. If you want to see the game as 2nd player press red arrow button on the player panel to switch to that player. More details can be found in [[First_steps_with_BGA_Studio]]
+
+2. Modify the text in .js file (for example replace "Player zone content goes here" to "Hello"), reload the page in the browser and make sure your ftp sync works as expected.
+Note: if you have not setup auto-sync do it now, manually copying files is a no-starter.
+
+3. Express stop from settings menu (the gear icon).
+
+
+<b>Attention!!!</b> Very important note about reloading, if you don't remember this you may spend hours debugging. The browser caches images. If you change any of these files, you have to do "full reload" which is usually Ctrl+F5 (or Ctrl+reload button on browser) not just a regular reload.
+
+== Hook version control system ==
+
+For a real game, or even for this tutorial, we recommend committing the code to version control right from the start. You are going to find yourself in a situation where the game doesn't even start anymore and no way of debugging it, unless you have a way to revert. That is where version control becomes very handy. If you are not familiar with version control (e.g. [https://git-scm.com/docs/gittutorial git]) then at least back up your files after each major change. Start now.
+
+Code for this tutorial available is on github: https://github.com/elaskavaia/bga-heartsla
+
+Different revisions represent different steps along the process, starting from original template to a PARTIAL game.
+
+Note: the game was re-written using new template, the old code is in "oldframework" branch. The new template is in main branch.
+
+The full game can be found in your FTP home folder, after getting read-only access: https://en.doc.boardgamearena.com/First_steps_with_BGA_Studio#Set_up_dev_environment_ide,_editor_and_File_Sync
+
+== Update game infos and box graphics ==
+
+Even it does nothing yet, always start by making sure the game looks decent in the game selector, meaning it has nice box graphics and its information is correct. For that we need to edit [[Game_meta-information: gameinfos.inc.php|gameinfos.inc.php]].
+
+For a real game, you would go to [http://boardgamegeek.com BoardGameGeek], find the game, and use the information from BGG to fill in the gameinfos.
+
+So let's do that. Find "hearts" on BoardGameGeek. (Hint: Original release 1850 :))
+
+You can fill in the year of publishing and bgg id, put ''Public Domain'' under publisher (for a real game, leave an empty string so it won't be displayed), and a publisher id of 171 for public domain. And as designer and author you can just put your own name just for fun. Set number of players to 4.
+
+  // Game publisher
+    'publisher' => 'Public Domain',
+
+  // Board Game Geek ID of the publisher
+    'publisher_bgg_id' => 171,
+
+  // Players configuration that can be played (ex: 2 to 4 players)
+  'players' => array( 4 ),  
+
+'''Important step''': you have to refresh the information in the Studio website through the control panel. So go to Control Panel -> Manage Games -> heartsYOURNAME
+and press Reload for 'Reload game informations'.
+
+
+
+The next step would be to replace game box with nicer images. This can be done from the [[Game metadata manager]]. 
+
+Now try to start the game again. If you somehow introduced a syntax error in the gameinfos file it may not work (the game won't start).
+Always use the "Express Start" button to start the game. You should see a standard state prompt from the template. You should see 4 players on the right: testdude0 .. testdude3.
+To switch between them press the red arrow button near their names, it will open another tab. This way you don't need to login and logout from multiple accounts!
+
+
+<i>Note: if you had run the game before with less than 4 players there is a bug that will prevent you from running it with 4 only (if you did not run it before or run it with 4 players as instructed stop reading this note), to workaround revert back to original players array (i.e. 1,2,3,4), reload game options, then create a table with 4 players, exit that game table, then change gameoptions to 4 only as above, reload game options, create table again.</i>
+
+== Layout and Graphics ==
+
+In this section we will do graphics of the game, and main layout of the game.
+
+First copy a sprite with cards image from [https://x.boardgamearena.net/data/others/cards/FULLREZ_CARDS_ORIGINAL_NORMAL.jpg]  into img/cards.jpg folder of your project. 
+
+Details about images can be found here: [[Game art: img directory]]. If you did not setup auto-sync of files, sync the graphics manually with remote folder (re-sync with your workspace).
+
+Edit .js to add some divs to represent player table and hand area, at the beginning of the setup function
+
+<pre>
+
+        setup: function( gamedatas )
+        {
+            console.log( "Starting game setup" );
+
+            document.getElementById('game_play_area').insertAdjacentHTML('beforeend', `
+                <div id="myhand_wrap" class="whiteblock">
+                    <b id="myhand_label">${_('My hand')}</b>
+                    <div id="myhand">
+                    </div>
+                </div>
+
+            `);
+            // ...
+</pre>
+
+
+If you refresh you should see now white area with My Hand title.
+
+
+[[File:Heartsla-tpl2.png]]
+
+Now lets add a card into the hand, just so you can feel it. Edit the html snippet we inserted earlier buy adding a line representing a card
+<pre>
+...
+    <div id="myhand">
+       <div class="fakecard"></div>
+    </div>
+...
+</pre>
+
+Edit .css file, add this code (.css file is empty now, only has comments, just tuck this at the end)
+<pre>
+.fakecard {
+    display: inline-block;
+    position: relative;
+    margin-top: 5px;
+    border-radius: 5%;
+    width: 100px;
+    height: 135px;
+    background-size: calc(100px * 15);
+    background-image: url('img/cards.jpg'); /* temp hack to see it */
+}
+</pre>
+
+When you change existing graphics files remember that you have to FORCE-reload page, i.e. Ctrl-F5, otherwise its cached.
+
+You should see this (more less):
+
+[[File:Heartsla-tpl3.png]]
+
+
+Note: If you don't see the card a) check it was synced to remote folder b) force reload page
+
+Awesome! Now lets do the rest of layout.
+
+
+
+Let's complete the game template. You template should have this code, just leave it there
+<pre>
+
+      // Example to add a div on the game area
+      document.getElementById("game_play_area").insertAdjacentHTML("beforeend",
+                            <div id="player-tables"></div>
+                        `
+      );
+</pre>
+
+Then change the code following comment " // Setting up player boards " with this
+<pre>
+      // Setting up player boards
+      const numPlayers = Object.keys(gamedatas.players).length;
+      Object.values(gamedatas.players).forEach((player, index) => {
+        document.getElementById("player-tables").insertAdjacentHTML(
+          "beforeend",
+          // we generate this html snippet for each player
+          `
+    <div class="playertable whiteblock playertable_${DIRECTIONS[index]}">
+        <div class="playertablename" style="color:#${player.color};">${player.name}</div>
+        <div id="tableau_${player.id}"></div>
+    </div>
+    `
+        );
+      });
+</pre>
+What we did is we added a template for every players at the table.
+Now try to reload you game.
+Oops! it won't load. This is to teach you how it will look like when you have syntax error in your js file. The game will hang loading at 10% or so. How to know what happened?
+Open dev tools in browser (usually F12) and navigate to Console tab. You will see a stack trace of where error is. In our case
+  heartslav.js:68 Uncaught (in promise) ReferenceError: DIRECTIONS is not defined
+
+
+In real hearts game they use this direction array to map every player to direction (like North) but its not needed, we can just use player index. 
+Lets just replace DIRECTIONS[index] with index, i.e
+  <div class="playertable whiteblock playertable_${index}">
+
+
+Reload. If everything went well you should see this:
+
+[[File:Heartsla-tpl4.png|alt=Display player space of all players]]
+
+These are "tableau" areas for 4 players plus My hand visible only to one player. They are not exactly how we wanted them to be because we did not edit .css yet.
+
+Now edit .css, add these lines after import before our previous definition
+
+<pre>
+:root {
+  --h-card-width: 100px;
+  --h-card-height: 135px;
+  --h-tableau-width: 180px;
+  --h-tableau-height: 180px;
+}
+
+#player-tables {
+  position: relative;
+  width: calc(var(--h-tableau-width) * 3.9);
+  height: calc(var(--h-tableau-height) * 2.4);
+}
+
+.playertablename {
+  font-weight: bold;
+}
+
+.playertable {
+  position: absolute;
+  text-align: center;
+  width: var(--h-tableau-width);
+  height: var(--h-tableau-height);
+}
+
+.playertable_0 {
+  top: 0px;
+  left: 50%;
+  margin-left: calc(var(--h-tableau-width) / 2 * -1);
+}
+
+.playertable_1 {
+  left: 0px;
+  top: 50%;
+  margin-top: calc(var(--h-tableau-height) / 2 * -1);
+}
+.playertable_2 {
+  right: 0px;
+  top: 50%;
+  margin-top: calc(var(--h-tableau-height) / 2 * -1);
+}
+.playertable_3 {
+  bottom: 0px;
+  left: 50%;
+  margin-left: calc(var(--h-tableau-width) / 2 * -1);
+}
+</pre>
+
+
+Now you force Reload and you should see this:
+[[File:Heartsla-tpl5.png]]
+
+<i>Note: if you did not see changes you may have not force reloaded, force means you use Ctrl+F5 or Cltr+Shift-R, if you don't "force" browser will use cached version of images! Which is not what you just changed</i>
+
+Here is some explanations about CSS (if you know everything about css already skip this):
+* At top we defined some variables for sizes of cards and player "mats" (which we call tableau)
+* We trying to layout mats in kind of diamond shape
+* We define positions of our elements using top/bottom/left/right style property
+* We used standard technique of centering the element which is use 50% for lets say "left", and then shift by half of size of object to actually center it (margin-left). You can remove margins to see how it look if we did not do that
+
+
+
+
+
+<i>Another Note: In general if you have auto-sync you don't need to reload if you change Game.php file, you need normal reload if you change js, and force reload for images. If you changed state machine or database you likely need to restart the game.</i>
+
+== Game Interface with BGA Cards ==
+
+The BGA framework provides a few out of the box classes to deal with cards. The client side
+contains a component called [[BgaCards]] and it can be used for any dynamic html "pieces" management and animation. 
+On the server side we will use the [[Deck]] class which we discuss later.
+
+
+If you open cards.jpg in an image viewer you will see that it is a "sprite" image - a 15x4 grid of images stitched together,
+which is a very efficient way to transport images. So we will use the card manager class to mark up these images and create
+"card" divs for us and place them on the board.
+
+First, we need to add dependencies in the .js file:
+<pre>
+define([
+  "dojo",
+  "dojo/_base/declare",
+  "ebg/core/gamegui",
+  "ebg/counter",
+  getLibUrl("bga-animations", "1.x"), // the lib uses bga-animations so this is required!
+  getLibUrl("bga-cards", "1.x"), // bga-cards itself
+], function (dojo, declare, gamegui, counter, BgaAnimations, BgaCards) {
+  return declare( // ...
+ 
+</pre>
+
+Now we will remove the fake card we added (in .js file) search and remove 
+  <div class="fakecard"></div>
+
+
+Then we will add initialization code of bga cards and related component in setup method after the template code and before setupNotifications
+<pre>
+      // create the animation manager, and bind it to the `game.bgaAnimationsActive()` function
+      this.animationManager = new BgaAnimations.Manager({
+        animationsActive: () => this.bgaAnimationsActive(),
+      });
+
+      const cardWidth = 100;
+      const cardHeight = 135;
+
+      // create the card manager
+      this.cardsManager = new BgaCards.Manager({
+        animationManager: this.animationManager,
+        type: "ha-card", // the "type" of our cards in css
+        getId: (card) => card.id,
+
+        cardWidth: cardWidth,
+        cardHeight: cardHeight,
+        cardBorderRadius: "5%",
+        setupFrontDiv: (card, div) => {
+          div.dataset.type = card.type; // suit 1..4
+          div.dataset.typeArg = card.type_arg; // value 2..14
+          div.style.backgroundPositionX = `calc(100% / 14 * (${card.type_arg} - 2))`; // 14 is number of columns in stock image minus 1
+          div.style.backgroundPositionY = `calc(100% / 3 * (${card.type} - 1))`; // 3 is number of rows in stock image minus 1
+          this.addTooltipHtml(div.id, `tooltip of ${card.type}`);
+        },
+      });
+
+      // create the stock, in the game setup
+      this.handStock = new BgaCards.HandStock(
+        this.cardsManager,
+        document.getElementById("myhand")
+      );
+          // TODO: fix handStock
+      this.handStock.addCards([
+        { id: 1, type: 2, type_arg: 4 }, // 4 of hearts
+        { id: 2, type: 3, type_arg: 11 }, // Jack of clubs
+      ]); 
+</pre>
+
+Also we need to add this .css (anywhere), that will map front face of the card to our image (1500% is because this image 15 times bigger than single card on X axis)
+<pre>
+.ha-card-front {
+  background-size: 1500% auto;
+  background-image: url("img/cards.jpg");
+}
+</pre>
+
+
+Explanations:
+* First we created animation manager which will be used later
+* Then we define constant with width and height of our cards in pixes
+* Then we create the cards manager. We tell it how to get unique id of each card (getId), and how to setup the div representing the front of the card (setupFrontDiv). In this function we set data attributes for type and type_arg which we will use later, and we set background position to show correct part of sprite image.
+* Then we create a hand stock component which will represent player's hand. It is attached to div with id "myhand".
+* Finally we add two cards into the hand stock just for testing.
+
+
+Now if you reload you should see two cards in your hand:
+
+[[File:Heartsla-tpl6.png|alt=Display two cards in player's hand]]   
+
+Now we will add the "stock" object that will control player tableau (add in setup function before setupNotification)
+<code>
+
+      // map stocks
+
+      this.tableauStocks = {};
+      Object.values(gamedatas.players).forEach((player, index) => {
+        // add player tableau stock
+        const stock = new BgaCards.LineStock(
+          this.cardsManager,
+          document.getElementById(`tableau_${player.id}`)
+        );
+        this.tableauStocks[player.id] = stock;
+        // TODO: fix tableauStocks
+        stock.addCards([
+          { id: index + 10, type: index + 1, type_arg: index + 2 },
+        ]);
+      });
+</code>
+
+[[File:Heartsla-tpl7.png]]   
+
+Explanations:
+* We go over each player and create component called LineStock to represent player tableau, it will hold a single card
+* We assign this into tableauStocks map indexed by player id to use later
+* Finally we add a fake card into that stock just to see something
+
+Stock control can handle clicking on items and forms the selection. You can immediately react to selection
+or you can query it later; for example when user presses some other button.
+
+Let's hook it up. Add this in the setup method in .js file, before // TODO: fix handStock:
+
+      this.handStock.setSelectionMode("single");
+      this.handStock.onCardClick = (card) => {
+        alert("boom!");
+      };
+
+Reload the game and click on Card in your hand. You should get "boom".
+
+We will stop for now with client because we need to code some server stuff.
+
+
+== Game Database and Game Initialization ==
+
+Next step, you want to design a game database and setup a new game (on the server side).
+For that we need to a) modify the database schema to add our cards data b) add some global variables into
+the existing globals table.
+
+==== Database Schema ====
+To modify the schema, first exit your existing game(s). Open '''dbmodel.sql''' file and uncomment the card table creation.
+
+<pre>
+CREATE TABLE IF NOT EXISTS `card` (
+  `card_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `card_type` varchar(16) NOT NULL,
+  `card_type_arg` int(11) NOT NULL,
+  `card_location` varchar(16) NOT NULL,
+  `card_location_arg` int(11) NOT NULL,
+  PRIMARY KEY (`card_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 AUTO_INCREMENT=1 ;
+</pre>
+
+This is the "card" table which will be managed by the Deck php class.
+
+
+=== Game State Variables ===
+Next we finally get into Game.php class (in modules/php subdir), where the main logic and db interaction would be. Find php constructor which should be 
+  function __construct( )
+This is first function in a file. Add this code to constructor (replace existing initGameStateLabel if any).
+<pre>
+    public function __construct()
+    {
+        parent::__construct();
+        $this->initGameStateLabels(
+            [
+                "currentHandType" => 10,
+                "trickColor" => 11,
+                "alreadyPlayedHearts" => 12,
+                "firstPlayer" => 13,
+            ]
+        );
+
+        $this->cards = $this->deckFactory->createDeck('card');
+        // ...
+</pre>
+
+If you see errors in IDE its because we also have to declared "cards" as class member, add ''public Deck $cards;'' before the contructor.
+Also if you using IDE it will suggest to import Deck class, accept it. If you are using 'vi' just add this import where other imports (use in php) at the begging of the file after namespace declaration.
+
+  use Bga\GameFramework\Components\Deck;
+
+Here we are initializing three "Game State Variables" which are variables stored in the database. They are integers.
+It must start with values higher or equal to 10 since values lower than 10 are reserved. These values are stored by numeric ids
+in the database, but in the php we associate them with string labels for convenience of access. 
+
+The variables are:
+
+*"trickColor": numbers from 1 to 4 that map to card suit (not sure why it's called color; maybe it's a translation from French);
+*"alreadyPlayedHearts": a boolean flag (0 or 1) indicating whether somebody used hearts on the trick;
+*"currentHandType": stores the value to indicate who to give cards to during exchange.
+*"firstPlayer": stores first player id
+
+The next 2 lines are creating $this->cards object and associating it with "card" table in the the database.
+
+<i>If we called db table 'foo' instead of 'card' the last statement would have been  $this->cards->createDeck( "foo" )</i>
+
+Since we changed the database schema, we cannot re-use our existing game, we have to do express stop (from burger menu).
+
+Then start a new game and make sure it starts, then exit.
+<i>
+If you made a mistake
+in the .sql or php constructor the game won't start, and good luck debugging it. (That is why it's important to check
+once in a while to make sure it still starts while you remember what you have changed.)
+</i>
+
+Code Rev [https://github.com/elaskavaia/bga-heartsla/tree/acd1926a6c09dc9afd0752cb6b78eef17c5dfe5c]
+
+=== Game Setup ===
+Now we can go to game initialization '''setupNewGame''' in Game.php. This method is called only once when the game is created.
+
+In your template project you should have code that deals with player table, just leave it as is. Start inserting the
+other code after "TODO: Setup the initial game situation here" comment.
+<pre>
+// Init global values with their initial values
+
+// Note: hand types: 0 = give 3 cards to player on the left
+//                   1 = give 3 cards to player on the right
+//                   2 = give 3 cards to player opposite
+//                   3 = keep cards
+$this->setGameStateInitialValue('currentHandType', 0);
+
+// Set current trick color to zero (= no trick color)
+$this->setGameStateInitialValue('trickColor', 0);
+
+// Mark if we already played hearts during this hand
+$this->setGameStateInitialValue('alreadyPlayedHearts', 0);
+</pre>
+
+Here we initialize all the globals to 0.
+
+Next is to create our cards in the database. We have one deck of cards so it's pretty simple.
+<pre>
+// Create cards
+$cards = [];
+foreach (self::$CARD_SUITS as $suit => $suit_info) {
+    // spade, heart, diamond, club
+    foreach (self::$CARD_TYPES as $value => $info_value) {
+        //  2, 3, 4, ... K, A
+        $cards[] = ['type' => $suit, 'type_arg' => $value, 'nbr' => 1];
+    }
+}
+$this->cards->createCards($cards, 'deck');
+</pre>
+
+This code that will create one of each card. But don't run it yet, because we missing ''self:$CARD_SUITS''.
+So we have state of the game in the database, but there is some static game information which never changes.
+This information should be stored in .php and this way it can be accessed from all .php files (and .js if you send it via getAllDatas()).
+
+Note: originally it was stored in material.inc.php file which is no longer part of default template, when you have a lot of material it makes sence to get it out of Game.php
+
+We will edit  Game.php now by adding these lines in constructor (if you already have ''self::$CARD_TYPES'', replace it)
+
+<pre>
+elf::$CARD_SUITS = [
+    1 => [
+        'name' => clienttranslate('Spade'),
+    ],
+    2 => [
+        'name' => clienttranslate('Heart'),
+    ],
+    3 => [
+        'name' => clienttranslate('Club'),
+    ],
+    4 => [
+        'name' => clienttranslate('Diamond'),
+    ]
+];
+
+self::$CARD_TYPES = [
+    2 => ['name' => '2'],
+    3 => ['name' => '3'],
+    4 => ['name' => '4'],
+    5 => ['name' => '5'],
+    6 => ['name' => '6'],
+    7 => ['name' => '7'],
+    8 => ['name' => '8'],
+    9 => ['name' => '9'],
+    10 => ['name' => '10'],
+    11 => ['name' => clienttranslate('J')],
+    12 => ['name' => clienttranslate('Q')],
+    13 => ['name' => clienttranslate('K')],
+    14 => ['name' => clienttranslate('A')]
+];
+</pre>
+ 
+If you pass a value to the client via notification you should always use untranslated strings, and the client will translate it. Function 'clienttranslate' marks the value for translation but does not actually change it for php. For more about this wonderful translation stuff see [[Translations]].
+
+Can also declared these fields in the class
+ public static array $CARD_SUITS;
+ public static array $CARD_TYPES;
+
+==== Dealing Cards ====
+After we have initialized our deck, we want to deal 13 at random for each player. Add this after createCards in setupNewGame function in the Game.php file:<pre>
+// Shuffle deck
+$this->cards->shuffle('deck');
+// Deal 13 cards to each players
+$players = $this->loadPlayersBasicInfos();
+foreach ($players as $player_id => $player) {
+    $cards = $this->cards->pickCards(13, 'deck', $player_id);
+}
+
+</pre>In the next section we are going to learn how to show those cards to the right players, without exposing other player hands. 
+
+==Full Game Model Synchronization==
+
+Now at any point in the game we need to make sure that database information can be reflected back in the UI, so we must fix the '''getAllDatas''' function
+to return all possible data we need to reconstruct the game. This is in the Game.php file. 
+
+=== Player's Hand ===
+The template for getAllDatas() already takes care of player info. Let's just
+add hand and tableau data before we return a result.
+
+<pre>
+// Cards in player hand
+$result['hand'] = $this->cards->getCardsInLocation('hand', $current_player_id);
+
+// Cards played on the table
+$result['cardsontable'] = $this->cards->getCardsInLocation('cardsontable');
+</pre>
+
+Now on the client side we should display this data, so in your .js file in the setup function (which is the receiver of getAllDatas) replace our hack of putting 5 of Hearts directly into the hand with:
+
+<pre>
+// Cards in player's hand
+for (var i in this.gamedatas.hand) {
+  var card = this.gamedatas.hand[i];
+  var color = card.type;
+  var value = card.type_arg;
+  this.playerHand.addToStockWithId(this.getCardUniqueId(color, value), card.id);
+}
+</pre>
+
+At this point, you could start a new game and each player should see their hand!
+
+=== Cards on Table ===
+To the setup method, add:
+ // Cards played on table
+ for (i in this.gamedatas.cardsontable) {
+   var card = this.gamedatas.cardsontable[i];
+   var color = card.type;
+   var value = card.type_arg;
+   var player_id = card.location_arg;
+   this.playCardOnTable(player_id, color, value, card.id);
+ }
+Add the '''playCardOnTable''' function in the "utilities" section.
+
+<pre>
+playCardOnTable : function(player_id, color, value, card_id) {
+    // player_id => direction
+    this.addTableCard(value, color, player_id, player_id);
+
+    if (player_id != this.player_id) {
+        // Some opponent played a card
+        // Move card from player panel
+        this.placeOnObject('cardontable_' + player_id, 'overall_player_board_' + player_id);
+    } else {
+        // You played a card. If it exists in your hand, move card from there and remove
+        // corresponding item
+
+        if ($('myhand_item_' + card_id)) {
+            this.placeOnObject('cardontable_' + player_id, 'myhand_item_' + card_id);
+            this.playerHand.removeFromStockById(card_id);
+        }
+    }
+
+    // In any case: move it to its final destination
+    this.slideToObject('cardontable_' + player_id, 'playertablecard_' + player_id).play();
+},
+</pre>
+
+For this to work we also need to define the addTableCard
+<pre>
+        addTableCard(value, color, card_player_id, playerTableId) {
+            const x = value - 2;
+            const y = color - 1;
+            document.getElementById('playertablecard_' + playerTableId).insertAdjacentHTML('beforeend', `
+                <div class="card cardontable" id="cardontable_${card_player_id}" style="background-position:-${x}00% -${y}00%"></div>
+            `);
+        },
+</pre>
+
+
+What this does is basically create another card object, because if it is not our card it's not in our hand (Stock) so
+we have to create it out of thin air.  Now we have an object with an id of 'cardontable_' + player_id. Depending
+on who is playing it we either place it on the player miniboard or in hand (and remove it from hand stock). Then we animate the card move.
+
+We also should fix our .css file now to add style for cardontable and REMOVE background for playertablecard which really is a placeholder div and not a card. (Don't miss the remove step; it will be all screwy if you do!)
+
+<pre>
+.playertablecard {
+    display: inline-block;
+    position: relative;
+    margin-top: 5px;
+    width: 72px;
+    height: 96px;
+    /* we remove background-image here */
+}
+
+/*** cards on table ***/
+
+.cardontable {
+    position: absolute;
+    width: 72px;
+    height: 96px;
+    background-image: url('img/cards.jpg'); 
+}
+</pre>
+
+Next, we will hook-up clicking on card and test if our ''playCardOnTable'' works.
+
+Find ''onPlayerHandSelectionChanged'' function in the JS file, we should have logging there like  ''console.log("on playCard "+card_id);''
+So after that insert this (Note: this code is for testing we will replace it with server interaction after we test it.):
+<pre>
+console.log("on playCard " + card_id);
+// type is (color - 1) * 13 + (value - 2)
+var type = items[0].type;
+var color = Math.floor(type / 13) + 1;
+var value = (type % 13) + 2;
+
+this.playCardOnTable(this.player_id, color, value, card_id);
+</pre>
+Now if you reload you should be able to click on card from your hand and see it moving,
+you can click on few cards this way. When you done enjoying the animation, press F5 to get your hand back.
+
+[[File:Heartsla-sync.png]]
+
+Code Rev [https://github.com/elaskavaia/bga-heartsla/tree/0ed80e254a6d0c29f267b308d1c2016db90fd4f6]
+
+==State Machine==
+
+Stop the game. We are about to work on the game logic.
+
+You already read [http://www.slideshare.net/boardgamearena/bga-studio-focus-on-bga-game-state-machine Focus on BGA game state machine], so you know that this is the heart of your game logic. Here are the states we need to build (excluding two more states we will add later to handle the exchange of cards at the beginning of the rounds):
+
+*Cards are dealt to all players (lets call it "NewHand")
+*Player is selected who will start a new trick ("NewTrick")
+*Player start or respond to played card ("PlayerTurn")
+*Game control is passed to next player or trick is ended ("NextPlayer")
+*End of hand processing (scoring and check for end of game) ("NextHand")
+
+=== Creating the basic states ===
+Let's create our first state - "NewHand". Create a new file under "module/php/State" (you can delete the existing files there) and name it "'''NewHand.php'''". 
+<pre>
+<?php
+
+namespace Bga\Games\Heartsclay\States;
+
+use Bga\GameFramework\StateType;
+use Bga\Games\Heartsclay\Game;
+
+class NewHand extends \Bga\GameFramework\States\GameState
+{
+  public function __construct(protected Game $game)
+  {
+    parent::__construct(
+      $game,
+      id: 2, // the idea of the state
+      type: StateType::GAME, // This type means that no player is active, and the game will automatically progress
+      description: "",
+      updateGameProgression: true, // entering this state can update the progress bar of the game
+    );
+  }
+
+  // The action we do when entering the state
+  public function onEnteringState()
+  {
+    // TODO: implement logic
+    return NewTrick::class;
+  }
+}
+
+</pre>
+You can read more about it here: [[State classes: State directory]]
+
+Let's implement the other states:
+
+==== '''NewTrick.php''' ====
+<pre>
+<?php
+
+namespace Bga\Games\Heartsclay\States;
+
+use Bga\GameFramework\StateType;
+use Bga\Games\Heartsclay\Game;
+
+class NewTrick extends \Bga\GameFramework\States\GameState
+{
+  public function __construct(protected Game $game)
+  {
+    parent::__construct(
+      $game,
+      id: 30,
+      type: StateType::GAME,
+      description: "",
+    );
+  }
+
+  public function onEnteringState()
+  {
+    // TODO: implement logic
+    return PlayerTurn::class;
+  }
+}
+
+</pre>
+
+==== '''PlayerTurn.php''' ====
+This action is different because it has an action a player must take. Read the comments in the code below to understand the syntax:<pre>
+<?php
+
+namespace Bga\Games\Heartsclay\States;
+
+use Bga\GameFramework\StateType;
+use Bga\Games\Heartsclay\Game;
+use Bga\GameFramework\States\PossibleAction;
+
+class PlayerTurn extends \Bga\GameFramework\States\GameState
+{
+  public function __construct(protected Game $game)
+  {
+    parent::__construct(
+      $game,
+      id: 31,
+      type: StateType::ACTIVE_PLAYER, // This state type means that one player is active and can do actions
+      description: clienttranslate('${actplayer} must play a card'), // We tell OTHER players what they are waiting for
+      descriptionMyTurn: clienttranslate('${you} must play a card'), // We tell the ACTIVE player what they must do
+      // We suround the code with clienttranslate() so that the text is sent to the client for translation (this will enable the game to support other languages)
+    );
+  }
+
+  #[PossibleAction] // a PHP attribute that tells BGA "this method describes a possible action that the player could take", so that you can call that action from the front (the client)
+  public function actPlayCard(int $cardId, int $activePlayerId)
+  {
+    // TODO: implement logic
+    return NextPlayer::class; // after the action, we move to the next player
+  }
+
+public function zombie(int $playerId): void
+  {
+    // We must implement this so BGA can auto play in the case a player becomes a zombie, but for this tutorial we won't handle this case
+    throw new \BgaUserException('Not implemented: zombie for player ${player_id}', args: [
+      'player_id' => $playerId,
+    ]);
+  }
+}
+
+</pre>You would also notice the "zombie" method. This would allow BGA to auto-player for the player if they became inactive. This is mandatory, but we will not implement this as part of a tutorial. Feel free to go back to it if you want to complete the game. 
+
+==== '''NextPlayer.php''' ====
+This state have a couple of different options for what would be the next state:
+
+* If not all players played a card in the current trick - we need to go to '''PlayerTurn''' (for the next player)
+* If all players finished the trick but still have cards in their hand - we need to go to '''NewTrick'''
+* If this is the last trick (no more cards in end) and it's finished, we need to go to '''EndHand'''
+
+For now, let's return '''PlayerTurn'''. We'll implement the logic later.<pre>
+<?php
+
+namespace Bga\Games\Heartsclay\States;
+
+use Bga\GameFramework\StateType;
+use Bga\Games\Heartsclay\Game;
+
+class NextPlayer extends \Bga\GameFramework\States\GameState
+{
+  public function __construct(protected Game $game)
+  {
+    parent::__construct(
+      $game,
+      id: 32,
+      type: StateType::GAME,
+      description: "",
+    );
+  }
+
+  public function onEnteringState(): int
+  {
+    return PlayerTurn::class;
+  }
+}
+
+</pre>
+
+==== '''EndHand.php''' ====
+Here too we will have two options for transition, either we play another hand ('''NewHand''') or we finish the game (a reserved id for finishing the game is '''99'''). 
+
+We will implement this logic later. For now let's return '''NewHand'''.
+
+<pre>
+<?php
+
+namespace Bga\Games\Heartsclay\States;
+
+use Bga\GameFramework\StateType;
+use Bga\Games\Heartsclay\Game;
+
+class EndHand extends \Bga\GameFramework\States\GameState
+{
+  public function __construct(protected Game $game)
+  {
+    parent::__construct(
+      $game,
+      id: 40,
+      type: StateType::GAME,
+      description: "",
+    );
+  }
+
+  public function onEnteringState()
+  {
+    // TODO: implement logic
+    return NewHand::class;
+  }
+}
+
+</pre>
+
+==== State Logic ====
+
+===== New Hand =====
+We need to:
+
+# Move all cards to the deck
+# Shuffle the cards
+# Deal the cards to the players
+# Reset the "alreadyPlayedHearts" state
+
+Here's the code:<pre>
+public function onEnteringState()
+  {
+    $game = $this->game;
+    // Take back all cards (from any location => null) to deck
+    $game->cards->moveAllCardsInLocation(null, "deck");
+    $game->cards->shuffle('deck');
+    // Deal 13 cards to each players
+    // Create deck, shuffle it and give 13 initial cards
+    $players = $game->loadPlayersBasicInfos();
+    foreach ($players as $player_id => $player) {
+      $cards = $game->cards->pickCards(13, 'deck', $player_id);
+      // Notify player about his cards
+      $this->notify->player($player_id, 'newHand', '', array('cards' => $cards));
+    }
+    $game->setGameStateValue('alreadyPlayedHearts', 0);
+    return NewTrick::class;
+  }
+</pre>
+
+===== New Trick =====
+We only need to reset the trick color<pre>
+public function onEnteringState()
+  {
+    // New trick: active the player who wins the last trick, or the player who own the club-2 card
+    // Reset trick color to 0 (= no color)
+    $this->game->setGameStateInitialValue('trickColor', 0);
+    return PlayerTurn::class;
+  }
+</pre>
+
+===== Next Player =====
+Here we can handle the logic of what is the next state we need to move to:<pre>
+public function onEnteringState()
+  {
+    $game = $this->game;
+    // Active next player OR end the trick and go to the next trick OR end the hand
+    if ($game->cards->countCardInLocation('cardsontable') == 4) {
+      // This is the end of the trick
+      // Move all cards to "cardswon" of the given player
+      $best_value_player_id = $game->activeNextPlayer(); // TODO figure out winner of trick
+      $game->cards->moveAllCardsInLocation('cardsontable', 'cardswon', null, $best_value_player_id);
+
+      if ($game->cards->countCardInLocation('hand') == 0) {
+        // End of the hand
+        return EndHand::class;
+      } else {
+        // End of the trick
+        return NewTrick::class;
+      }
+    } else {
+      // Standard case (not the end of the trick)
+      // => just active the next player
+      $player_id = $game->activeNextPlayer();
+      $game->giveExtraTime($player_id);
+      return PlayerTurn::class;
+    }
+  }
+</pre>'''Important''': All state actions game or player must return the next state transition (or thrown exception). 
+
+===== Player Action =====
+We will not implement this yet, but we can throw an exception to check that the interaction is working properly. 
+<pre>
+#[PossibleAction] // a PHP attribute that tells BGA "this method describes a possible action that the player could take", so that you can call that action from the front (the client)
+  public function actPlayCard(int $cardId, int $activePlayerId)
+  {
+    throw new \BgaUserException('Not implemented: ${player_id} played card ${card_id}', args: [
+      'player_id' => $activePlayerId,
+      'card_id' => $cardId,
+    ]);
+    return NextPlayer::class; // after the action, we move to the next player
+  }
+</pre>
+
+==== Test Your Game is not broken ====
+We changed state related logic, so we need to restart the game. If the game starts without error we are good. We won't be able to test the interactions yet because we need to implement the client side. 
+
+Since we added bunch of different states we need to remove some more templace code, in .js file find onUpdateActionButtons, and remove all functional code, leaving just this<pre>
+    onUpdateActionButtons: function (stateName, args) {
+      console.log("onUpdateActionButtons: " + stateName, args);
+
+      if (this.isCurrentPlayerActive()) {
+        switch (stateName) {
+          case "playerTurn":
+            break;
+        }
+      }
+    },
+</pre>
+
+==Client - Server Interactions==
+
+Now to implement things for real we have hook UI actions to ajax calls, and process notifications sent by the server.
+So previously we hooked playCardOnTable right into js handler which caused client animation, in real game its a two
+step operation. When user clicks on game element js client sends an ajax call to server, server processes it and updates database, server sends
+notification in response, client hooks animations to server notification.
+
+So in .js code replace '''onPlayerHandSelectionChanged''' with
+<pre>
+onPlayerHandSelectionChanged : function() {
+    var items = this.playerHand.getSelectedItems();
+
+    if (items.length > 0) {
+        var action = 'actPlayCard';
+        if (this.checkAction(action, true)) {
+            // Can play a card
+            const cardId = items[0].id;                    
+            this.bgaPerformAction(action, {
+                cardId, // this corresponds to the argument name in php, so it needs to be exactly the same
+            });
+
+            this.playerHand.unselectAll();
+        } else if (this.checkAction('actGiveCards')) {
+            // Can give cards => let the player select some cards
+        } else {
+            this.playerHand.unselectAll();
+        }
+    }
+},
+</pre>
+
+
+Now when you click on card you should get a server response: Not implemented...
+
+Lets implement it, in '''PlayerTurn.php'''
+
+We need to:
+
+# Move the card
+# Notify all player on the the move
+<pre>
+#[PossibleAction]
+  public function actPlayCard(int $cardId, int $activePlayerId)
+  {
+    $game = $this->game;
+    $game->cards->moveCard($cardId, 'cardsontable', $activePlayerId);
+    // TODO: check rules here
+    $currentCard = $game->cards->getCard($cardId);
+    // And notify
+    $game->notify->all('playCard', clienttranslate('${player_name} plays ${value_displayed} ${color_displayed}'), array(
+      'i18n' => array('color_displayed', 'value_displayed'),
+      'card_id' => $cardId,
+      'player_id' => $activePlayerId,
+      'player_name' => $game->getActivePlayerName(),
+      'value' => $currentCard['type_arg'],
+      'value_displayed' => Game::$CARD_TYPES[$currentCard['type_arg']]['name'],
+      'color' => $currentCard['type'],
+      'color_displayed' => Game::$CARD_SUITS[$currentCard['type']]['name']
+    ));
+    return NextPlayer::class;
+  }
+</pre>
+
+We get the card from client, we move it to the table (moveCard is hooked to database directly, its part of deck class),
+we notify all players and we change state. What we are missing here is bunch of checks (rule enforcements), we will add it later.
+
+Interesting part about this notify is that we use i18n array for strings that needs to be translated by client, so
+they are sent as English text in notification, then client has to know which parameters needs translating.
+
+On the client side .js we have to implement a notification handler to do the animation. Below the '''setupNotification''' method (which you don't need to touch) you can put the following code:
+
+<pre>
+notif_newHand: function (notif) {
+  // We received a new full hand of 13 cards.
+  this.playerHand.removeAll();
+
+  for (var i in notif.cards) {
+    var card = notif.cards[i];
+    var color = card.type;
+    var value = card.type_arg;
+    this.playerHand.addToStockWithId(
+      this.getCardUniqueId(color, value),
+      card.id,
+    );
+  }
+},
+
+notif_playCard: function (notif) {
+  // Play a card on the table
+  this.playCardOnTable(
+    notif.player_id,
+    notif.color,
+    notif.value,
+    notif.card_id,
+  );
+},
+</pre>
+
+BGA will automatically bind the event to the '''notif_{eventName} handler.'''
+
+Refresh the page and try to play a card from the correct player. The card should move to the played area. When you refresh - you should still see the card there.
+
+Finish playing the trick. You will notice
+after trick is done all cards remains on the table, but if you press F5 they would disappear, this is because
+we updated database to pick-up the cards but did not send notification about it.
+
+So in '''NextPlayer.php''' file add notification after moveAllCardsInLocation call:
+
+<pre>
+// Notify
+      // Note: we use 2 notifications here in order we can pause the display during the first notification
+      //  before we move all cards to the winner (during the second)
+      $players = $game->loadPlayersBasicInfos();
+      $game->notify->all('trickWin', clienttranslate('${player_name} wins the trick'), array(
+        'player_id' => $best_value_player_id,
+        'player_name' => $players[$best_value_player_id]['player_name']
+      ));
+      $game->notify->all('giveAllCardsToPlayer', '', array(
+        'player_id' => $best_value_player_id
+      ));
+</pre>
+
+And add these handlers in the .js file:<pre>
+notif_trickWin: function (notif) {
+      // We do nothing here (just wait in order players can view the 4 cards played before they're gone.
+    },
+    notif_giveAllCardsToPlayer: function (notif) {
+      // Move all cards on table to given table, then destroy them
+      var winner_id = notif.player_id;
+      for (var player_id in this.gamedatas.players) {
+        var anim = this.slideToObject(
+          "cardontable_" + player_id,
+          "overall_player_board_" + winner_id,
+        );
+        dojo.connect(anim, "onEnd", function (node) {
+          dojo.destroy(node);
+        });
+        anim.play();
+      }
+    },
+</pre>
+
+'''<u>Editor note</u>: after migrating the examples to up to date practices I couldn't figure out how you're supposed to do the delay. So the bottom part might not make sense. This part in the guide should be updated.''' 
+
+So 'trickWin' notification does not do much except it will delay the processing of next notification by 1 second (1000 ms)
+and it will log the message (that happens independently of what handler does).
+<i>Note: if on the other hand you don't want to log but want to do something else, send an empty message</i>
+
+Now after the trick you see all cards move towards the "player's stash".
+
+==Scoring and End of game handling==
+
+Now we should calculate scoring and for that we need to actually track who wins the trick.
+Trick is won by the player with highest card (no trump). We just need to remember what is trick suite.
+For which we will use state variable 'trickColor' which we already conveniently created.
+
+In '''PlayerTurn.php''' state, add this before any notification
+<pre>
+$currentTrickColor = $game->getGameStateValue('trickColor');
+if ($currentTrickColor == 0) $game->setGameStateValue('trickColor', $currentCard['type']);
+
+</pre>
+
+This will make sure we remember the first suit being played, now to use it modify the '''NextPlayer.php''' state to fix our TODO comment
+<pre>
+if ($game->cards->countCardInLocation('cardsontable') == 4) {
+  // This is the end of the trick
+  $cards_on_table = $game->cards->getCardsInLocation('cardsontable');
+  $best_value = 0;
+  $best_value_player_id = null;
+  $currentTrickColor = $game->getGameStateValue('trickColor');
+  foreach ($cards_on_table as $card) {
+    // Note: type = card color
+    if ($card['type'] == $currentTrickColor) {
+      if ($best_value_player_id === null || $card['type_arg'] > $best_value) {
+        $best_value_player_id = $card['location_arg']; // Note: location_arg = player who played this card on table
+        $best_value = $card['type_arg']; // Note: type_arg = value of the card
+      }
+    }
+  }
+
+  // Active this player => he's the one who starts the next trick
+  $this->gamestate->changeActivePlayer($best_value_player_id);
+
+  // Move all cards to "cardswon" of the given player
+  $game->cards->moveAllCardsInLocation('cardsontable', 'cardswon', null, $best_value_player_id);
+  
+  // Notify
+  // ... same code as before
+</pre>
+
+The scoring rule in the studio example code is huge multi-page function, for this tutorial we will make simplier.
+Lets score -1 point per heart and call it a day. And game will end when somebody goes -100 or below.
+
+As UI goes for scoring, the main thing to update is:
+
+* The scoring on the mini boards represented by stars
+* Show that in the log. 
+
+For a real game, you might consider showing the scoring in a [[Game_interface_logic:_yourgamename.js#Scoring_dialogs|Scoring Dialog]] using tableWindow notification, but this is out of scope of this tutorial. You can do that as homework. 
+
+In '''EndHAnd.php''':
+
+<pre>
+use Bga\GameFramework\NotificationMessage; // add this to the top of the file, together with the other "use" statements
+
+...
+
+public function onEnteringState()
+{
+  $game = $this->game;
+  // Count and score points, then end the game or go to the next hand.
+  $players = $game->loadPlayersBasicInfos();
+  // Gets all "hearts" + queen of spades
+
+  $player_to_points = array();
+  foreach ($players as $player_id => $player) {
+    $player_to_points[$player_id] = 0;
+  }
+
+  $cards = $game->cards->getCardsInLocation("cardswon");
+  foreach ($cards as $card) {
+    $player_id = $card['location_arg'];
+    // Note: 2 = heart
+    if ($card['type'] == 2) {
+      $player_to_points[$player_id]++;
+    }
+  }
+
+  // Apply scores to player
+  foreach ($player_to_points as $player_id => $points) {
+    if ($points != 0) {
+      $game->playerScore->inc(
+        $player_id,
+        -$points,
+        new NotificationMessage(
+          clienttranslate('${player_name} gets ${absInc} hearts and looses ${absInc} points'),
+        )
+      );
+    }
+  }
+
+  ///// Test if this is the end of the game
+  if ($game->playerScore->getMin() <= -100) {
+    // Trigger the end of the game !
+    return 99; // end game
+  }
+
+
+  return NewHand::class;
+}
+</pre>
+
+The game should work now. Try to play it!
+
+==Additional stuff==
+
+The following things were not implemented and can add them yourself by looking at the code of original hearts game:
+
+*Remove debug code from setupNewGame to deal cards, cards are now dealt in stNewHand state handler
+*Rule checking and rule enforcements in actPlayCard function
+*Start scoring with 100 points each and end when <= 0
+*Fix scoring rules with Q of spades and 26 point reverse scoring
+*First player one with 2 club
+*Add progress handling
+*Add statistics
+*Add card exchange states
+*Add game option to start with 75 points instead of 100
+
+==After the tutorial==
+You might want to check another tutorial, or start working on your first real project !
+
+[[Create a game in BGA Studio: Complete Walkthrough]]
+[[Category:Studio]]

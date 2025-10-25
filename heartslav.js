@@ -114,11 +114,16 @@ define([
         this.cardsManager,
         document.getElementById("myhand")
       );
-          // TODO: fix
+      this.handStock.setSelectionMode("single");
+      this.handStock.onCardClick = (card) => {
+        alert("boom!");
+      };
+
+      // TODO: fix handStock
       this.handStock.addCards([
         { id: 1, type: 2, type_arg: 4 }, // 4 of hearts
         { id: 2, type: 3, type_arg: 11 }, // Jack of clubs
-      ]); 
+      ]);
 
       // map stocks
 

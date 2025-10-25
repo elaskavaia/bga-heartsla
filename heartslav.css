@@ -95,17 +95,6 @@
 }
 
 .ha-card-front {
-  background-size: calc(100px * 15);
+  background-size: 1500% auto;
   background-image: url("img/cards.jpg");
-}
-
-.fakecard {
-  display: inline-block;
-  position: relative;
-  margin-top: 5px;
-  border-radius: 5%;
-  width: 100px;
-  height: 135px;
-  background-size: calc(100px * 15);
-  background-image: url("img/cards.jpg"); /* temp hack to see it */
 }

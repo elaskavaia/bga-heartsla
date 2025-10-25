@@ -46,7 +46,7 @@ define([
         */
 
     setup: function (gamedatas) {
-      console.log("Starting game setup");
+      console.log("Starting game setup", gamedatas);
 
       document.getElementById("game_play_area").insertAdjacentHTML(
         "beforeend",
@@ -119,11 +119,8 @@ define([
         alert("boom!");
       };
 
-      // TODO: fix handStock
-      this.handStock.addCards([
-        { id: 1, type: 2, type_arg: 4 }, // 4 of hearts
-        { id: 2, type: 3, type_arg: 11 }, // Jack of clubs
-      ]);
+      // Cards in player's hand
+      this.handStock.addCards(Array.from(Object.values(this.gamedatas.hand)));
 
       // map stocks
 
@@ -135,11 +132,14 @@ define([
           document.getElementById(`tableau_${player.id}`)
         );
         this.tableauStocks[player.id] = stock;
-        // TODO: fix
-        stock.addCards([
-          { id: index + 10, type: index + 1, type_arg: index + 2 },
-        ]);
       });
+
+      // Cards played on table
+      for (i in this.gamedatas.cardsontable) {
+        var card = this.gamedatas.cardsontable[i];
+        var player_id = card.location_arg;
+        this.tableauStocks[player_id].addCards([card]);
+      }
 
       // TODO: Set up your game interface here, according to "gamedatas"
 

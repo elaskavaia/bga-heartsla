@@ -505,19 +505,19 @@ Next is to create our cards in the database. We have one deck of cards so it's p
 Insert this after  // TODO: Setup the initial game situation here.
 
 <pre>
-// Create cards
-$cards = [];
-foreach (self::$CARD_SUITS as $suit => $suit_info) {
-    // spade, heart, diamond, club
-    foreach (self::$CARD_TYPES as $value => $info_value) {
-        //  2, 3, 4, ... K, A
-        $cards[] = ['type' => $suit, 'type_arg' => $value, 'nbr' => 1];
-    }
-}
-$this->cards->createCards($cards, 'deck');
+        // Create cards
+        $cards = [];
+        foreach ($this->card_types["suites"] as $suit => $suit_info) {
+            // spade, heart, diamond, club
+            foreach ($this->card_types["types"] as $value => $info_value) {
+                //  2, 3, 4, ... K, A
+                $cards[] = ['type' => $suit, 'type_arg' => $value, 'nbr' => 1];
+            }
+        }
+        $this->cards->createCards($cards, 'deck');
 </pre>
 
-This code that will create one of each card. But don't run it yet, because we missing ''self:$CARD_SUITS''.
+This code that will create one of each card. But don't run it yet, because we missing ''card_types''.
 So we have state of the game in the database, but there is some static game information which never changes.
 This information should be stored in .php and this way it can be accessed from all .php files (and .js if you send it via getAllDatas()).
 
@@ -526,55 +526,60 @@ Note: originally it was stored in material.inc.php file which is no longer part 
 We will edit  Game.php now by adding these lines in constructor (if you already have ''self::$CARD_TYPES'', replace it)
 
 <pre>
-self::$CARD_SUITS = [
-    1 => [
-        'name' => clienttranslate('Spade'),
-    ],
-    2 => [
-        'name' => clienttranslate('Heart'),
-    ],
-    3 => [
-        'name' => clienttranslate('Club'),
-    ],
-    4 => [
-        'name' => clienttranslate('Diamond'),
-    ]
-];
+        $this->card_types = [
+            "suites" => [
+                1 => [
+                    'name' => clienttranslate('Spade'),
+                ],
+                2 => [
+                    'name' => clienttranslate('Heart'),
+                ],
+                3 => [
+                    'name' => clienttranslate('Club'),
+                ],
+                4 => [
+                    'name' => clienttranslate('Diamond'),
+                ]
+            ],
+            "types" => [
+                2 => ['name' => '2'],
+                3 => ['name' => '3'],
+                4 => ['name' => '4'],
+                5 => ['name' => '5'],
+                6 => ['name' => '6'],
+                7 => ['name' => '7'],
+                8 => ['name' => '8'],
+                9 => ['name' => '9'],
+                10 => ['name' => '10'],
+                11 => ['name' => clienttranslate('J')],
+                12 => ['name' => clienttranslate('Q')],
+                13 => ['name' => clienttranslate('K')],
+                14 => ['name' => clienttranslate('A')]
+            ]
+        ];
 
-self::$CARD_TYPES = [
-    2 => ['name' => '2'],
-    3 => ['name' => '3'],
-    4 => ['name' => '4'],
-    5 => ['name' => '5'],
-    6 => ['name' => '6'],
-    7 => ['name' => '7'],
-    8 => ['name' => '8'],
-    9 => ['name' => '9'],
-    10 => ['name' => '10'],
-    11 => ['name' => clienttranslate('J')],
-    12 => ['name' => clienttranslate('Q')],
-    13 => ['name' => clienttranslate('K')],
-    14 => ['name' => clienttranslate('A')]
-];
 </pre>
  
 If you pass a value to the client via notification you should always use untranslated strings, and the client will translate it. Function 'clienttranslate' marks the value for translation but does not actually change it for php. For more about this wonderful translation stuff see [[Translations]].
 
-Can also declared these fields in the class
- public static array $CARD_SUITS;
- public static array $CARD_TYPES;
+Can also have declared this in the class (replace $CARD_TYPES)
+ public array $card_types;
+
+Reload to make it still works (no errors).
 
 ==== Dealing Cards ====
-After we have initialized our deck, we want to deal 13 at random for each player. Add this after createCards in setupNewGame function in the Game.php file:<pre>
+After we have initialized our deck, we want to deal 13 at random for each player. Add this after createCards in setupNewGame function in the Game.php file:
+<pre>
 // Shuffle deck
 $this->cards->shuffle('deck');
 // Deal 13 cards to each players
 $players = $this->loadPlayersBasicInfos();
 foreach ($players as $player_id => $player) {
-    $cards = $this->cards->pickCards(13, 'deck', $player_id);
+    $this->cards->pickCards(13, 'deck', $player_id);
 }
 
-</pre>In the next section we are going to learn how to show those cards to the right players, without exposing other player hands. 
+</pre>
+In the next section we are going to learn how to show those cards to the right players, without exposing other player hands. 
 
 ==Full Game Model Synchronization==
 
@@ -593,93 +598,31 @@ $result['hand'] = $this->cards->getCardsInLocation('hand', $current_player_id);
 $result['cardsontable'] = $this->cards->getCardsInLocation('cardsontable');
 </pre>
 
-Now on the client side we should display this data, so in your .js file in the setup function (which is the receiver of getAllDatas) replace our hack of putting 5 of Hearts directly into the hand with:
+Now on the client side we should display this data, so in your .js file in the setup function (which is the receiver of getAllDatas), find // TODO: fix handStock
+and replace our hack of putting cards directly into the hand with:
 
 <pre>
-// Cards in player's hand
-for (var i in this.gamedatas.hand) {
-  var card = this.gamedatas.hand[i];
-  var color = card.type;
-  var value = card.type_arg;
-  this.playerHand.addToStockWithId(this.getCardUniqueId(color, value), card.id);
+      // Cards in player's hand
+      this.handStock.addCards(Array.from(Object.values(this.gamedatas.hand)));
 }
 </pre>
+So we added all cards from server to the hand stock. Have to do this ugly array convertion, hopefully they will fix addCards so we don't need to do this.
 
-At this point, you could start a new game and each player should see their hand!
+At this point, you  have to RESTART a game and each player should see their hand!
 
 === Cards on Table ===
-To the setup method, add:
- // Cards played on table
- for (i in this.gamedatas.cardsontable) {
-   var card = this.gamedatas.cardsontable[i];
-   var color = card.type;
-   var value = card.type_arg;
-   var player_id = card.location_arg;
-   this.playCardOnTable(player_id, color, value, card.id);
- }
-Add the '''playCardOnTable''' function in the "utilities" section.
-
-<pre>
-playCardOnTable : function(player_id, color, value, card_id) {
-    // player_id => direction
-    this.addTableCard(value, color, player_id, player_id);
-
-    if (player_id != this.player_id) {
-        // Some opponent played a card
-        // Move card from player panel
-        this.placeOnObject('cardontable_' + player_id, 'overall_player_board_' + player_id);
-    } else {
-        // You played a card. If it exists in your hand, move card from there and remove
-        // corresponding item
-
-        if ($('myhand_item_' + card_id)) {
-            this.placeOnObject('cardontable_' + player_id, 'myhand_item_' + card_id);
-            this.playerHand.removeFromStockById(card_id);
-        }
-    }
-
-    // In any case: move it to its final destination
-    this.slideToObject('cardontable_' + player_id, 'playertablecard_' + player_id).play();
-},
-</pre>
-
-For this to work we also need to define the addTableCard
-<pre>
-        addTableCard(value, color, card_player_id, playerTableId) {
-            const x = value - 2;
-            const y = color - 1;
-            document.getElementById('playertablecard_' + playerTableId).insertAdjacentHTML('beforeend', `
-                <div class="card cardontable" id="cardontable_${card_player_id}" style="background-position:-${x}00% -${y}00%"></div>
-            `);
-        },
-</pre>
+No lets fix out tableau, find comment in setup method of .js file  // TODO: fix tableau
+and remove stock.addCards... from that loop. But right after this add
 
 
-What this does is basically create another card object, because if it is not our card it's not in our hand (Stock) so
-we have to create it out of thin air.  Now we have an object with an id of 'cardontable_' + player_id. Depending
-on who is playing it we either place it on the player miniboard or in hand (and remove it from hand stock). Then we animate the card move.
+      // Cards played on table
+      for (i in this.gamedatas.cardsontable) {
+        var card = this.gamedatas.cardsontable[i];
+        var player_id = card.location_arg;
+        this.tableauStocks[player_id].addCards([card]);
+      }
 
-We also should fix our .css file now to add style for cardontable and REMOVE background for playertablecard which really is a placeholder div and not a card. (Don't miss the remove step; it will be all screwy if you do!)
-
-<pre>
-.playertablecard {
-    display: inline-block;
-    position: relative;
-    margin-top: 5px;
-    width: 72px;
-    height: 96px;
-    /* we remove background-image here */
-}
-
-/*** cards on table ***/
-
-.cardontable {
-    position: absolute;
-    width: 72px;
-    height: 96px;
-    background-image: url('img/cards.jpg'); 
-}
-</pre>
+If you reload now you can see nothing on the table.
 
 Next, we will hook-up clicking on card and test if our ''playCardOnTable'' works.
 

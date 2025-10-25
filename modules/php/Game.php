@@ -26,8 +26,8 @@ use Bga\GameFramework\Components\Deck;
 
 class Game extends \Bga\GameFramework\Table
 {
-    public static array $CARD_SUITS;
-    public static array $CARD_TYPES;
+
+    public array $card_types;
 
     public Deck $cards;
 
@@ -57,36 +57,36 @@ class Game extends \Bga\GameFramework\Table
         $this->cards = $this->deckFactory->createDeck('card');
         $this->playerEnergy = $this->counterFactory->createPlayerCounter('energy');
 
-
-        self::$CARD_TYPES = [
-            1 => [
-                'name' => clienttranslate('Spade'),
+        $this->card_types = [
+            "suites" => [
+                1 => [
+                    'name' => clienttranslate('Spade'),
+                ],
+                2 => [
+                    'name' => clienttranslate('Heart'),
+                ],
+                3 => [
+                    'name' => clienttranslate('Club'),
+                ],
+                4 => [
+                    'name' => clienttranslate('Diamond'),
+                ]
             ],
-            2 => [
-                'name' => clienttranslate('Heart'),
-            ],
-            3 => [
-                'name' => clienttranslate('Club'),
-            ],
-            4 => [
-                'name' => clienttranslate('Diamond'),
+            "types" => [
+                2 => ['name' => '2'],
+                3 => ['name' => '3'],
+                4 => ['name' => '4'],
+                5 => ['name' => '5'],
+                6 => ['name' => '6'],
+                7 => ['name' => '7'],
+                8 => ['name' => '8'],
+                9 => ['name' => '9'],
+                10 => ['name' => '10'],
+                11 => ['name' => clienttranslate('J')],
+                12 => ['name' => clienttranslate('Q')],
+                13 => ['name' => clienttranslate('K')],
+                14 => ['name' => clienttranslate('A')]
             ]
-        ];
-
-        self::$CARD_TYPES = [
-            2 => ['name' => '2'],
-            3 => ['name' => '3'],
-            4 => ['name' => '4'],
-            5 => ['name' => '5'],
-            6 => ['name' => '6'],
-            7 => ['name' => '7'],
-            8 => ['name' => '8'],
-            9 => ['name' => '9'],
-            10 => ['name' => '10'],
-            11 => ['name' => clienttranslate('J')],
-            12 => ['name' => clienttranslate('Q')],
-            13 => ['name' => clienttranslate('K')],
-            14 => ['name' => clienttranslate('A')]
         ];
 
         /* example of notification decorator.
@@ -176,6 +176,13 @@ class Game extends \Bga\GameFramework\Table
 
         // TODO: Gather all information about current game situation (visible by player $current_player_id).
 
+        // Cards in player hand
+        $result['hand'] = $this->cards->getCardsInLocation('hand', $current_player_id);
+
+        // Cards played on the table
+        $result['cardsontable'] = $this->cards->getCardsInLocation('cardsontable');
+
+
         return $result;
     }
 
@@ -244,14 +251,23 @@ class Game extends \Bga\GameFramework\Table
 
         // Create cards
         $cards = [];
-        foreach (self::$CARD_SUITS as $suit => $suit_info) {
+        foreach ($this->card_types["suites"] as $suit => $suit_info) {
             // spade, heart, diamond, club
-            foreach (self::$CARD_TYPES as $value => $info_value) {
+            foreach ($this->card_types["types"] as $value => $info_value) {
                 //  2, 3, 4, ... K, A
                 $cards[] = ['type' => $suit, 'type_arg' => $value, 'nbr' => 1];
             }
         }
         $this->cards->createCards($cards, 'deck');
+
+        // Shuffle deck
+        $this->cards->shuffle('deck');
+        // Deal 13 cards to each players
+        $players = $this->loadPlayersBasicInfos();
+        foreach ($players as $player_id => $player) {
+            $this->cards->pickCards(13, 'deck', $player_id);
+        }
+
 
         // Activate first player once everything has been initialized and ready.
         $this->activeNextPlayer();

@@ -459,6 +459,8 @@ The next 2 lines are creating $this->cards object and associating it with "card"
 
 <i>If we called db table 'foo' instead of 'card' the last statement would have been  $this->cards->createDeck( "foo" )</i>
 
+Note: if you have some other leftovers from template like playerEnergy, leave it for now as is.
+
 Since we changed the database schema, we cannot re-use our existing game, we have to do express stop (from burger menu).
 
 Then start a new game and make sure it starts, then exit.
@@ -468,13 +470,16 @@ in the .sql or php constructor the game won't start, and good luck debugging it.
 once in a while to make sure it still starts while you remember what you have changed.)
 </i>
 
-Code Rev [https://github.com/elaskavaia/bga-heartsla/tree/acd1926a6c09dc9afd0752cb6b78eef17c5dfe5c]
+If you game won't even load and you want to stop it:
+https://en.doc.boardgamearena.com/Tools_and_tips_of_BGA_Studio#Stopping_Hanging_Game
+
+
 
 === Game Setup ===
 Now we can go to game initialization '''setupNewGame''' in Game.php. This method is called only once when the game is created.
 
 In your template project you should have code that deals with player table, just leave it as is. Start inserting the
-other code after "TODO: Setup the initial game situation here" comment.
+other code after "// Init global values with their initial values" comment.
 <pre>
 // Init global values with their initial values
 
@@ -493,7 +498,12 @@ $this->setGameStateInitialValue('alreadyPlayedHearts', 0);
 
 Here we initialize all the globals to 0.
 
+Just before return also add this (to remember who was first player)
+          $this->setGameStateInitialValue('firstPlayer', (int) $this->getActivePlayerId());
+
 Next is to create our cards in the database. We have one deck of cards so it's pretty simple.
+Insert this after  // TODO: Setup the initial game situation here.
+
 <pre>
 // Create cards
 $cards = [];
@@ -516,7 +526,7 @@ Note: originally it was stored in material.inc.php file which is no longer part 
 We will edit  Game.php now by adding these lines in constructor (if you already have ''self::$CARD_TYPES'', replace it)
 
 <pre>
-elf::$CARD_SUITS = [
+self::$CARD_SUITS = [
     1 => [
         'name' => clienttranslate('Spade'),
     ],

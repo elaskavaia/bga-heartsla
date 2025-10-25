@@ -26,10 +26,11 @@ use Bga\GameFramework\Components\Deck;
 
 class Game extends \Bga\GameFramework\Table
 {
+    public static array $CARD_SUITS;
     public static array $CARD_TYPES;
 
     public Deck $cards;
-    
+
     public PlayerCounter $playerEnergy;
 
     /**
@@ -55,16 +56,37 @@ class Game extends \Bga\GameFramework\Table
 
         $this->cards = $this->deckFactory->createDeck('card');
         $this->playerEnergy = $this->counterFactory->createPlayerCounter('energy');
-        
+
 
         self::$CARD_TYPES = [
             1 => [
-                "card_name" => clienttranslate('Troll'), // ...
+                'name' => clienttranslate('Spade'),
             ],
             2 => [
-                "card_name" => clienttranslate('Goblin'), // ...
+                'name' => clienttranslate('Heart'),
             ],
-            // ...
+            3 => [
+                'name' => clienttranslate('Club'),
+            ],
+            4 => [
+                'name' => clienttranslate('Diamond'),
+            ]
+        ];
+
+        self::$CARD_TYPES = [
+            2 => ['name' => '2'],
+            3 => ['name' => '3'],
+            4 => ['name' => '4'],
+            5 => ['name' => '5'],
+            6 => ['name' => '6'],
+            7 => ['name' => '7'],
+            8 => ['name' => '8'],
+            9 => ['name' => '9'],
+            10 => ['name' => '10'],
+            11 => ['name' => clienttranslate('J')],
+            12 => ['name' => clienttranslate('Q')],
+            13 => ['name' => clienttranslate('K')],
+            14 => ['name' => clienttranslate('A')]
         ];
 
         /* example of notification decorator.
@@ -197,6 +219,19 @@ class Game extends \Bga\GameFramework\Table
 
         // Init global values with their initial values.
 
+
+        // Note: hand types: 0 = give 3 cards to player on the left
+        //                   1 = give 3 cards to player on the right
+        //                   2 = give 3 cards to player opposite
+        //                   3 = keep cards
+        $this->setGameStateInitialValue('currentHandType', 0);
+
+        // Set current trick color to zero (= no trick color)
+        $this->setGameStateInitialValue('trickColor', 0);
+
+        // Mark if we already played hearts during this hand
+        $this->setGameStateInitialValue('alreadyPlayedHearts', 0);
+
         // Init game statistics.
         //
         // NOTE: statistics used in this file must be defined in your `stats.inc.php` file.
@@ -207,9 +242,20 @@ class Game extends \Bga\GameFramework\Table
 
         // TODO: Setup the initial game situation here.
 
+        // Create cards
+        $cards = [];
+        foreach (self::$CARD_SUITS as $suit => $suit_info) {
+            // spade, heart, diamond, club
+            foreach (self::$CARD_TYPES as $value => $info_value) {
+                //  2, 3, 4, ... K, A
+                $cards[] = ['type' => $suit, 'type_arg' => $value, 'nbr' => 1];
+            }
+        }
+        $this->cards->createCards($cards, 'deck');
+
         // Activate first player once everything has been initialized and ready.
         $this->activeNextPlayer();
-
+        $this->setGameStateInitialValue('firstPlayer', (int) $this->getActivePlayerId());
         return PlayerTurn::class;
     }
 

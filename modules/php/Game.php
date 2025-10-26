@@ -21,8 +21,10 @@ declare(strict_types=1);
 namespace Bga\Games\Heartslav;
 
 use Bga\Games\Heartslav\States\PlayerTurn;
-use Bga\GameFramework\Components\Counters\PlayerCounter;
 use Bga\GameFramework\Components\Deck;
+
+define("HEARTS", 2);
+define("CLUBS", 3);
 
 class Game extends \Bga\GameFramework\Table
 {
@@ -252,29 +254,32 @@ class Game extends \Bga\GameFramework\Table
         // Get all data needed to check playable cards at the moment
         $currentTrickColor = $this->getGameStateValue('trick_color');
         $broken_heart = $this->brokenHeart();
-        $total_played = $this->cards->countCardInLocation('cardswon') + $this->cards->countCardInLocation('cardsontable');
         $hand = $this->cards->getPlayerHand($player_id);
-
         $playable_card_ids = [];
         $all_ids = array_keys($hand);
 
-
         if ($this->cards->getCardsInLocation('cardsontable', $player_id)) return []; // Already played a card
 
-
-
         // Check whether the first card of the hand has been played or not
-        if ($total_played == 0) {
-            // No cards have been played yet, find and return the starter card only
-            foreach ($hand as $card) if ($card['type'] == 3 && $card['type_arg'] == 2) return [$card['id']]; // 2 of clubs
-            return [];
-        } else if (!$currentTrickColor) { // First card of the trick
-            if ($broken_heart) return $all_ids; // Broken Heart or no limitation, can play any card
-            else {
+        // $total_played = $this->cards->countCardInLocation('cardswon') + $this->cards->countCardInLocation('cardsontable');
+        // if ($total_played == 0) {
+        //     // No cards have been played yet, find and return the starter card only
+        //     foreach ($hand as $card) if ($card['type'] == 3 && $card['type_arg'] == 2) return [$card['id']]; // 2 of clubs
+        //     return [];
+        // } else
+        if (!$currentTrickColor) { // First card of the trick
+            if ($broken_heart) {
+                return $all_ids; // Broken Heart or no limitation, can play any card
+            } else {
                 // Exclude Heart as Heart hasn't been broken yet
-                foreach ($hand as $card) if ($card['type'] != 2) $playable_card_ids[] = $card['id'];
-                if (!$playable_card_ids) return $all_ids; // All Heart cards!
-                else return $playable_card_ids;
+                foreach ($hand as $card) {
+                    if ($card['type'] != HEARTS)
+                        $playable_card_ids[] = $card['id'];
+                }
+                if (!$playable_card_ids)
+                    return $all_ids; // All Heart cards!
+                else
+                    return $playable_card_ids;
             }
         } else {
             // Must follow the lead suit if possible
@@ -296,11 +301,6 @@ class Game extends \Bga\GameFramework\Table
         return (bool)$this->getUniqueValueFromDB("SELECT count(*) FROM card WHERE card_location = 'cardswon' AND card_type = 2");
     }
 
-    function tableHeart(): bool
-    {
-        // Check Heart in the current trick
-        return (bool)$this->getUniqueValueFromDB("SELECT count(*) FROM card WHERE card_location = 'cardsontable' AND card_type = 2");
-    }
 
     /**
      * Example of debug function.

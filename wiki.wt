@@ -880,6 +880,9 @@ Here's the code insert infro NewHand.php state:
             $this->notify->player($player_id, 'newHand', '', array('cards' => $cards));
         }
 
+        // reset trick color
+        $this->game->setGameStateInitialValue('trick_color', 0);
+
         // FIXME: first player one with 2 of clubs
         $first_player = (int) $this->game->getActivePlayerId();
         $this->game->gamestate->changeActivePlayer($first_player);
@@ -1168,7 +1171,7 @@ We will do our CSS hack, in .css add:
 ==Zombie turn==
 
 We will implement a zombie function now because a) we have to do it at some point
-b) playing 13 cards from 4 players is super annoying - but we can actually re-use this feature to "auto-play"
+b) playing 13 cards from 4 players manually to test this game is super annoying - but we can actually re-use this feature to "auto-play"
 
 In '''PlayerTurn.php''' file, replace the zombie function with this code:
 <pre>
@@ -1378,11 +1381,12 @@ Add these functions in '''Game.php''' file:
         if ($this->cards->getCardsInLocation('cardsontable', $player_id)) return []; // Already played a card
 
         // Check whether the first card of the hand has been played or not
-        if ($total_played == 0) {
-            // No cards have been played yet, find and return the starter card only
-            foreach ($hand as $card) if ($card['type'] == 3 && $card['type_arg'] == 2) return [$card['id']]; // 2 of clubs
-            return [];
-        } else if (!$currentTrickColor) { // First card of the trick
+        // if ($total_played == 0) {
+        //     // No cards have been played yet, find and return the starter card only
+        //     foreach ($hand as $card) if ($card['type'] == 3 && $card['type_arg'] == 2) return [$card['id']]; // 2 of clubs
+        //     return [];
+        // } else
+        if (!$currentTrickColor) { // First card of the trick
             if ($broken_heart) return $all_ids; // Broken Heart or no limitation, can play any card
             else {
                 // Exclude Heart as Heart hasn't been broken yet
@@ -1493,6 +1497,7 @@ In .js file in setup function add this code (after DOM is created):
       // Hide hand zone from spectators
       if (this.isSpectator)
         document.getElementById("myhand_wrap").style.display = "none";
+
 
 ==Additional stuff==
 

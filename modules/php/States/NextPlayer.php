@@ -28,7 +28,7 @@ class NextPlayer extends GameState
             $cards_on_table = $game->cards->getCardsInLocation('cardsontable');
             $best_value = 0;
             $best_value_player_id = $this->game->getActivePlayerId();
-            $currentTrickColor = $game->getGameStateValue('trickColor');
+            $currentTrickColor = $game->getGameStateValue('trick_color');
             foreach ($cards_on_table as $card) {
                 if ($card['type'] == $currentTrickColor) {   // type is card suite
                     if ($best_value_player_id === null || $card['type_arg'] > $best_value) {
@@ -63,7 +63,7 @@ class NextPlayer extends GameState
             } else {
                 // End of the trick
                 // Reset trick suite to 0 
-                $this->game->setGameStateInitialValue('trickColor', 0);
+                $this->game->setGameStateInitialValue('trick_color', 0);
                 return PlayerTurn::class;
             }
         } else {

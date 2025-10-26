@@ -56,7 +56,8 @@ Different revisions represent different steps along the process, starting from o
 
 Note: the game was re-written using new template, the old code is in "oldframework" branch. The new template is in main branch.
 
-The full game can be found in your FTP home folder, after getting read-only access: https://en.doc.boardgamearena.com/First_steps_with_BGA_Studio#Set_up_dev_environment_ide,_editor_and_File_Sync
+The real hearts game (that you can play on BGA) can be found in your FTP home folder, after getting read-only access, go to https://studio.boardgamearena.com/projects, select Already Published and find Hearts
+(It may not match this tutorial as framework diverged since this game was created and it may not have been updated)
 
 == Update game infos and box graphics ==
 
@@ -451,10 +452,7 @@ This is first function in a file. Add this code to constructor (replace existing
         parent::__construct();
         $this->initGameStateLabels(
             [
-                "currentHandType" => 10,
-                "trickColor" => 11,
-                "alreadyPlayedHearts" => 12,
-                "firstPlayer" => 13,
+                "trick_color" => 11,
             ]
         );
 
@@ -473,10 +471,7 @@ in the database, but in the php we associate them with string labels for conveni
 
 The variables are:
 
-*"trickColor": numbers from 1 to 4 that map to card suit (not sure why it's called color; maybe it's a translation from French);
-*"alreadyPlayedHearts": a boolean flag (0 or 1) indicating whether somebody used hearts on the trick;
-*"currentHandType": stores the value to indicate who to give cards to during exchange.
-*"firstPlayer": stores first player id
+*"trick_color": numbers from 1 to 4 that map to card suit (not sure why it's called color; maybe it's a translation from French);
 
 The next 2 lines are creating $this->cards object and associating it with "card" table in the the database.
 
@@ -506,23 +501,14 @@ other code after "// Init global values with their initial values" comment.
 <pre>
 // Init global values with their initial values
 
-// Note: hand types: 0 = give 3 cards to player on the left
-//                   1 = give 3 cards to player on the right
-//                   2 = give 3 cards to player opposite
-//                   3 = keep cards
-$this->setGameStateInitialValue('currentHandType', 0);
-
 // Set current trick color to zero (= no trick color)
-$this->setGameStateInitialValue('trickColor', 0);
+$this->setGameStateInitialValue('trick_color', 0);
 
-// Mark if we already played hearts during this hand
-$this->setGameStateInitialValue('alreadyPlayedHearts', 0);
+
 </pre>
 
 Here we initialize all the globals to 0.
 
-Just before return also add this (to remember who was first player)
-          $this->setGameStateInitialValue('firstPlayer', (int) $this->getActivePlayerId());
 
 Next is to create our cards in the database. We have one deck of cards so it's pretty simple.
 Insert this after  // TODO: Setup the initial game situation here.
@@ -874,7 +860,7 @@ We need to:
 # Move all cards to the deck
 # Shuffle the cards
 # Deal the cards to the players
-# Reset the "alreadyPlayedHearts" state
+
 
 Here's the code insert infro NewHand.php state:
 <pre>
@@ -893,11 +879,10 @@ Here's the code insert infro NewHand.php state:
             // Notify player about his cards
             $this->notify->player($player_id, 'newHand', '', array('cards' => $cards));
         }
-        $game->setGameStateValue('alreadyPlayedHearts', 0);
+
         // FIXME: first player one with 2 of clubs
         $first_player = (int) $this->game->getActivePlayerId();
         $this->game->gamestate->changeActivePlayer($first_player);
-        $this->game->setGameStateInitialValue('firstPlayer', $first_player);
         return PlayerTurn::class;
     }
 </pre>
@@ -923,7 +908,7 @@ public function onEnteringState()
       } else {
         // End of the trick
         // Reset trick suite to 0 
-        $this->game->setGameStateInitialValue('trickColor', 0);
+        $this->game->setGameStateInitialValue('trick_color', 0);
         return PlayerTurn::class;
       }
     } else {
@@ -975,7 +960,7 @@ Then find onClickCard that exists in template and replace with
             cardId: card.id, // this corresponds to the argument name in php, so it needs to be exactly the same
           });
           break;
-        case "GiveCardTurn":
+        case "GiveCards":
           // Can give cards TODO
           break;
         default: {
@@ -1220,12 +1205,12 @@ If your zombie function works correctly you will see player play automatically. 
 
 Now we should calculate scoring and for that we need to actually track who wins the trick.
 Trick is won by the player with highest card (no trump). We just need to remember what is trick suite.
-For which we will use state variable 'trickColor' which we already conveniently created.
+For which we will use state variable 'trick_color' which we already conveniently created.
 
 In '''PlayerTurn.php''' state, add this before notification
 <pre>
-$currentTrickColor = $game->getGameStateValue('trickColor');
-if ($currentTrickColor == 0) $game->setGameStateValue('trickColor', $currentCard['type']);
+$currenttrick_color = $game->getGameStateValue('trick_color');
+if ($currenttrick_color == 0) $game->setGameStateValue('trick_color', $currentCard['type']);
 
 </pre>
 
@@ -1237,9 +1222,9 @@ This will make sure we remember the first suit being played, now we will use it.
             $cards_on_table = $game->cards->getCardsInLocation('cardsontable');
             $best_value = 0;
             $best_value_player_id = $this->game->getActivePlayerId(); // fallback 
-            $currentTrickColor = $game->getGameStateValue('trickColor');
+            $currenttrick_color = $game->getGameStateValue('trick_color');
             foreach ($cards_on_table as $card) {
-                if ($card['type'] == $currentTrickColor) {   // type is card suite
+                if ($card['type'] == $currenttrick_color) {   // type is card suite
                     if ($best_value_player_id === null || $card['type_arg'] > $best_value) {
                         $best_value_player_id = $card['location_arg']; // location_arg is player who played this card on table
                         $best_value = $card['type_arg']; // type_arg is value of the card (2 to 14)
@@ -1319,6 +1304,19 @@ public function onEnteringState()
 </pre>
 
 The game should work now. Try to play it!
+==Clean Up==
+We left some code that comes from template and our first code, we should remove it now.
+
+* In .js file remove debugger; statements if any
+* Remove debug code from setupNewGame to deal cards, cards are now dealt in stNewHand state handler
+        // Shuffle deck
+        $this->cards->shuffle('deck');
+        // Deal 13 cards to each players
+        $players = $this->loadPlayersBasicInfos();
+        foreach ($players as $player_id => $player) {
+            $this->cards->pickCards(13, 'deck', $player_id);
+        }
+* Find and remove $playerEnergy variable and it's uses from Game.php (was part of template)
 
 ==Rule Enforcements==
 Now we have a working game, but there is no rule enforcement.
@@ -1340,18 +1338,18 @@ You can implement these rules in the '''actPlayCard''' function of '''PlayerTurn
                 clienttranslate('You do not have this card in your hand')
             );
         }
-        $currentTrickColor = $game->getGameStateValue('trickColor');
+        $currenttrick_color = $game->getGameStateValue('trick_color');
         // Check that player follows suit if possible
-        if ($currentTrickColor != 0) {
+        if ($currenttrick_color != 0) {
             $has_suit = false;
             $hand_cards = $game->cards->getCardsInLocation('hand', $activePlayerId);
             foreach ($hand_cards as $hand_card) {
-                if ($hand_card['type'] == $currentTrickColor) {
+                if ($hand_card['type'] == $currenttrick_color) {
                     $has_suit = true;
                     break;
                 }
             }
-            if ($has_suit && $card['type'] != $currentTrickColor) {
+            if ($has_suit && $card['type'] != $currenttrick_color) {
                 throw new \BgaUserException(
                     clienttranslate('You must follow suit')
                 );
@@ -1360,11 +1358,147 @@ You can implement these rules in the '''actPlayCard''' function of '''PlayerTurn
 
 
 </pre>
+You can try to play wrong card now and you will see error!
+But you noticed we broke the zombie mode as you cannot play random card anymore and now user cannot play ANY card, there are only some cards they can play but we don't show this information which is annoying.
+To fix this we can add a helper function that will return list of playable cards for given player.
+Add these functions in '''Game.php''' file:
+<pre>
+    function getPlayableCards($player_id): array
+    {
+        // Get all data needed to check playable cards at the moment
+        $currentTrickColor = $this->getGameStateValue('trick_color');
+        $broken_heart = $this->brokenHeart();
+        $total_played = $this->cards->countCardInLocation('cardswon') + $this->cards->countCardInLocation('cardsontable');
+        $hand = $this->cards->getPlayerHand($player_id);
+
+        $playable_card_ids = [];
+        $all_ids = array_keys($hand);
+
+
+        if ($this->cards->getCardsInLocation('cardsontable', $player_id)) return []; // Already played a card
+
+        // Check whether the first card of the hand has been played or not
+        if ($total_played == 0) {
+            // No cards have been played yet, find and return the starter card only
+            foreach ($hand as $card) if ($card['type'] == 3 && $card['type_arg'] == 2) return [$card['id']]; // 2 of clubs
+            return [];
+        } else if (!$currentTrickColor) { // First card of the trick
+            if ($broken_heart) return $all_ids; // Broken Heart or no limitation, can play any card
+            else {
+                // Exclude Heart as Heart hasn't been broken yet
+                foreach ($hand as $card) if ($card['type'] != 2) $playable_card_ids[] = $card['id'];
+                if (!$playable_card_ids) return $all_ids; // All Heart cards!
+                else return $playable_card_ids;
+            }
+        } else {
+            // Must follow the lead suit if possible
+            $same_suit = false;
+            foreach ($hand as $card)
+                if ($card['type'] == $currentTrickColor) {
+                    $same_suit = true;
+                    break;
+                }
+            if ($same_suit) return $this->getObjectListFromDB("SELECT card_id FROM card WHERE card_type = $currentTrickColor AND card_location = 'hand' AND card_location_arg = $player_id", true); // Has at least 1 card of the same suit
+
+            else return $all_ids;
+        }
+    }
+
+    function brokenHeart(): bool
+    {
+        // Check Heart in the played card piles
+        return (bool)$this->getUniqueValueFromDB("SELECT count(*) FROM card WHERE card_location = 'cardswon' AND card_type = 2");
+    }
+
+    function tableHeart(): bool
+    {
+        // Check Heart in the current trick
+        return (bool)$this->getUniqueValueFromDB("SELECT count(*) FROM card WHERE card_location = 'cardsontable' AND card_type = 2");
+    }
+
+</pre>
+
+Now we can use this function in zombie function of '''PlayerTurn.php''' to pick random playable card:
+<pre>
+    public function zombie(int $playerId)
+    {
+        $playable_cards = $this->game->getPlayableCards($playerId);
+        $zombieChoice = $this->getRandomZombieChoice($playable_cards); // random choice over possible moves
+        return $this->actPlayCard((int)$zombieChoice, $playerId);
+    }
+</pre>
+
+And we can significanly simply our rule check at actPlayCard
+<pre>
+        $game = $this->game;
+        $currentCard = $game->cards->getCard($cardId);
+        if (!$currentCard) {
+            throw new \BgaSystemException("Invalid move");
+        }
+        // Rule checks
+        $playable_cards = $game->getPlayableCards($activePlayerId);
+        if (!in_array($cardId, $playable_cards)) {
+            throw new \BgaUserException(clienttranslate("You cannot play this card now"));
+        }
+
+</pre>
+Finally we can send this to client via state args so user can see what moves are valid:
+In '''PlayerTurn.php''' add this method:
+<pre>
+    public function getArgs(int $activePlayerId): array
+    {
+        // Send playable card ids of the active player privately
+        return [
+            '_private' => [
+                $activePlayerId => [
+                    'playableCards' => $this->game->getPlayableCards($activePlayerId)
+                ],
+            ],
+        ];
+    }    
+</pre>
+On client side in .js file replace onEnteringState method with this code:
+<pre>
+    onEnteringState: function (stateName, args) {
+      console.log("Entering state: " + stateName, args);
+      switch (stateName) {
+        case "PlayerTurn":
+          if (this.isCurrentPlayerActive()) {
+            // Check playable cards received from argPlayerTurn() in php
+
+            const playableCardIds = args.args._private.playableCards.map((x) =>
+              parseInt(x)
+            ); 
+
+            const allCards = this.handStock.getCards();
+            const playableCards = allCards.filter(
+              (card) => playableCardIds.includes(parseInt(card.id)) // never know if we get int or string, this method cares
+            );
+            this.handStock.setSelectionMode("single", playableCards);
+          }
+          break;
+      }
+    },
+</pre>  
+And ALSO remove this.handStock.setSelectionMode("single") line from setup method, because it does not work there for some reason.
+
+
+
+
+==Spectator support==
+Spectator is not a real player but they can watch the game. Most games will require special spectator support, its one of the steps in the alpha testing check list.
+In this game its pretty simple, we just hide the hand control in client
+
+In .js file in setup function add this code (after DOM is created):
+      // Hide hand zone from spectators
+      if (this.isSpectator)
+        document.getElementById("myhand_wrap").style.display = "none";
+
 ==Additional stuff==
 
 The following things were not implemented and can add them yourself by looking at the code of original hearts game:
 
-*Remove debug code from setupNewGame to deal cards, cards are now dealt in stNewHand state handler
+
 *Rule checking and rule enforcements in actPlayCard function
 *Start scoring with 100 points each and end when <= 0
 *Fix scoring rules with Q of spades and 26 point reverse scoring

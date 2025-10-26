@@ -21,7 +21,7 @@ define([
   "ebg/core/gamegui",
   "ebg/counter",
   getLibUrl("bga-animations", "1.x"), // the lib uses bga-animations so this is required!
-  getLibUrl("bga-cards", "1.x"),
+  getLibUrl("bga-cards", "1.0.7"),
 ], function (dojo, declare, gamegui, counter, BgaAnimations, BgaCards) {
   return declare("bgagame.heartslav", ebg.core.gamegui, {
     constructor: function () {
@@ -84,6 +84,10 @@ define([
         );
       });
 
+      // Hide hand zone from spectators
+      if (this.isSpectator)
+        document.getElementById("myhand_wrap").style.display = "none";
+
       // create the animation manager, and bind it to the `game.bgaAnimationsActive()` function
       this.animationManager = new BgaAnimations.Manager({
         animationsActive: () => this.bgaAnimationsActive(),
@@ -118,13 +122,13 @@ define([
           sort: BgaCards.sort("type", "type_arg"),
         }
       );
-      this.handStock.setSelectionMode("single");
+
       this.handStock.onCardClick = (card) => {
         this.onCardClick(card);
       };
 
       // Cards in player's hand
-      const handCards = Array.from(Object.values(this.gamedatas.hand));
+
       this.handStock.addCards(Array.from(Object.values(this.gamedatas.hand)));
 
       // map stocks
@@ -136,7 +140,7 @@ define([
           this.cardsManager,
           document.getElementById(`tableau_${player.id}`)
         );
-        stock.setSelectionMode("none");
+
         this.tableauStocks[player.id] = stock;
 
         // add void stock
@@ -180,23 +184,24 @@ define([
     //
     onEnteringState: function (stateName, args) {
       console.log("Entering state: " + stateName, args);
-
       switch (stateName) {
-        /* Example:
-            
-            case 'myGameState':
-            
-                // Show some HTML block at this game state
-                dojo.style( 'my_html_block_id', 'display', 'block' );
-                
-                break;
-           */
+        case "PlayerTurn":
+          if (this.isCurrentPlayerActive()) {
+            // Check playable cards received from argPlayerTurn() in php
 
-        case "dummy":
+            const playableCardIds = args.args._private.playableCards.map((x) =>
+              parseInt(x)
+            ); 
+
+            const allCards = this.handStock.getCards();
+            const playableCards = allCards.filter(
+              (card) => playableCardIds.includes(parseInt(card.id)) // never know if we get int or string, this method cares
+            );
+            this.handStock.setSelectionMode("single", playableCards);
+          }
           break;
       }
     },
-
     // onLeavingState: this method is called each time we are leaving a game state.
     //                 You can use this method to perform some user interface changes at this moment.
     //
@@ -269,7 +274,7 @@ define([
             cardId: card.id, // this corresponds to the argument name in php, so it needs to be exactly the same
           });
           break;
-        case "GiveCardTurn":
+        case "GiveCards":
           // Can give cards TODO
           break;
         default: {
@@ -302,6 +307,7 @@ define([
 
     notif_newHand: function (args) {
       // We received a new full hand of 13 cards.
+
       this.handStock.removeAll();
       this.handStock.addCards(Array.from(Object.values(args.cards)));
     },

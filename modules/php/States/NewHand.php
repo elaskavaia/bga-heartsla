@@ -35,11 +35,11 @@ class NewHand extends GameState
             // Notify player about his cards
             $this->notify->player($player_id, 'newHand', '', ['cards' => $cards]);
         }
-        $game->setGameStateValue('alreadyPlayedHearts', 0);
+
         // FIXME: first player one with 2 of clubs
         $first_player = (int) $this->game->getActivePlayerId();
         $this->game->gamestate->changeActivePlayer($first_player);
-        $this->game->setGameStateInitialValue('firstPlayer', $first_player);
+
         return PlayerTurn::class;
     }
 }

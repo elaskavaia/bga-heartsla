@@ -31,7 +31,6 @@ class Game extends \Bga\GameFramework\Table
 
     public Deck $cards;
 
-    public PlayerCounter $playerEnergy;
 
     /**
      * Your global variables labels:
@@ -47,15 +46,12 @@ class Game extends \Bga\GameFramework\Table
         parent::__construct();
         $this->initGameStateLabels(
             [
-                "currentHandType" => 10,
-                "trickColor" => 11,
-                "alreadyPlayedHearts" => 12,
-                "firstPlayer" => 13,
+                "trick_color" => 11
             ]
         );
 
         $this->cards = $this->deckFactory->createDeck('card');
-        $this->playerEnergy = $this->counterFactory->createPlayerCounter('energy');
+
 
         $this->card_types = [
             "suites" => [
@@ -91,11 +87,11 @@ class Game extends \Bga\GameFramework\Table
 
         /* example of notification decorator.*/
 
-        $this->notify->addDecorator(function(string $message, array $args) {
+        $this->notify->addDecorator(function (string $message, array $args) {
             if (isset($args['player_id']) && !isset($args['player_name']) && str_contains($message, '${player_name}')) {
                 $args['player_name'] = $this->getPlayerNameById($args['player_id']);
             }
-    
+
             return $args;
         });
     }
@@ -167,7 +163,7 @@ class Game extends \Bga\GameFramework\Table
         $result["players"] = $this->getCollectionFromDb(
             "SELECT `player_id` `id`, `player_score` `score` FROM `player`"
         );
-        $this->playerEnergy->fillResult($result);
+
 
         // TODO: Gather all information about current game situation (visible by player $current_player_id).
 
@@ -187,8 +183,6 @@ class Game extends \Bga\GameFramework\Table
      */
     protected function setupNewGame($players, $options = [])
     {
-        $this->playerEnergy->initDb(array_keys($players), initialValue: 2);
-
         // Set the colors of the players with HTML color code. The default below is red/green/blue/orange/brown. The
         // number of colors defined here must correspond to the maximum number of players allowed for the gams.
         $gameinfos = $this->getGameinfos();
@@ -222,17 +216,10 @@ class Game extends \Bga\GameFramework\Table
         // Init global values with their initial values.
 
 
-        // Note: hand types: 0 = give 3 cards to player on the left
-        //                   1 = give 3 cards to player on the right
-        //                   2 = give 3 cards to player opposite
-        //                   3 = keep cards
-        $this->setGameStateInitialValue('currentHandType', 0);
 
         // Set current trick color to zero (= no trick color)
-        $this->setGameStateInitialValue('trickColor', 0);
+        $this->setGameStateInitialValue('trick_color', 0);
 
-        // Mark if we already played hearts during this hand
-        $this->setGameStateInitialValue('alreadyPlayedHearts', 0);
 
         // Init game statistics.
         //
@@ -255,19 +242,64 @@ class Game extends \Bga\GameFramework\Table
         }
         $this->cards->createCards($cards, 'deck');
 
-        // Shuffle deck
-        $this->cards->shuffle('deck');
-        // Deal 13 cards to each players
-        $players = $this->loadPlayersBasicInfos();
-        foreach ($players as $player_id => $player) {
-            $this->cards->pickCards(13, 'deck', $player_id);
-        }
-
-
         // Activate first player once everything has been initialized and ready.
         $this->activeNextPlayer();
-        $this->setGameStateInitialValue('firstPlayer', (int) $this->getActivePlayerId());
         return PlayerTurn::class;
+    }
+
+    function getPlayableCards($player_id): array
+    {
+        // Get all data needed to check playable cards at the moment
+        $currentTrickColor = $this->getGameStateValue('trick_color');
+        $broken_heart = $this->brokenHeart();
+        $total_played = $this->cards->countCardInLocation('cardswon') + $this->cards->countCardInLocation('cardsontable');
+        $hand = $this->cards->getPlayerHand($player_id);
+
+        $playable_card_ids = [];
+        $all_ids = array_keys($hand);
+
+
+        if ($this->cards->getCardsInLocation('cardsontable', $player_id)) return []; // Already played a card
+
+
+
+        // Check whether the first card of the hand has been played or not
+        if ($total_played == 0) {
+            // No cards have been played yet, find and return the starter card only
+            foreach ($hand as $card) if ($card['type'] == 3 && $card['type_arg'] == 2) return [$card['id']]; // 2 of clubs
+            return [];
+        } else if (!$currentTrickColor) { // First card of the trick
+            if ($broken_heart) return $all_ids; // Broken Heart or no limitation, can play any card
+            else {
+                // Exclude Heart as Heart hasn't been broken yet
+                foreach ($hand as $card) if ($card['type'] != 2) $playable_card_ids[] = $card['id'];
+                if (!$playable_card_ids) return $all_ids; // All Heart cards!
+                else return $playable_card_ids;
+            }
+        } else {
+            // Must follow the lead suit if possible
+            $same_suit = false;
+            foreach ($hand as $card)
+                if ($card['type'] == $currentTrickColor) {
+                    $same_suit = true;
+                    break;
+                }
+            if ($same_suit) return $this->getObjectListFromDB("SELECT card_id FROM card WHERE card_type = $currentTrickColor AND card_location = 'hand' AND card_location_arg = $player_id", true); // Has at least 1 card of the same suit
+
+            else return $all_ids;
+        }
+    }
+
+    function brokenHeart(): bool
+    {
+        // Check Heart in the played card piles
+        return (bool)$this->getUniqueValueFromDB("SELECT count(*) FROM card WHERE card_location = 'cardswon' AND card_type = 2");
+    }
+
+    function tableHeart(): bool
+    {
+        // Check Heart in the current trick
+        return (bool)$this->getUniqueValueFromDB("SELECT count(*) FROM card WHERE card_location = 'cardsontable' AND card_type = 2");
     }
 
     /**

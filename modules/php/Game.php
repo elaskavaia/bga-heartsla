@@ -89,20 +89,15 @@ class Game extends \Bga\GameFramework\Table
             ]
         ];
 
-        /* example of notification decorator.
-        // automatically complete notification args when needed
+        /* example of notification decorator.*/
+
         $this->notify->addDecorator(function(string $message, array $args) {
             if (isset($args['player_id']) && !isset($args['player_name']) && str_contains($message, '${player_name}')) {
                 $args['player_name'] = $this->getPlayerNameById($args['player_id']);
             }
-        
-            if (isset($args['card_id']) && !isset($args['card_name']) && str_contains($message, '${card_name}')) {
-                $args['card_name'] = self::$CARD_TYPES[$args['card_id']]['card_name'];
-                $args['i18n'][] = ['card_name'];
-            }
-            
+    
             return $args;
-        });*/
+        });
     }
 
     /**

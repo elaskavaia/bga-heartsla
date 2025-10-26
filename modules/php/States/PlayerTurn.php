@@ -5,114 +5,101 @@ declare(strict_types=1);
 namespace Bga\Games\Heartslav\States;
 
 use Bga\GameFramework\StateType;
-use Bga\GameFramework\States\GameState;
-use Bga\GameFramework\States\PossibleAction;
 use Bga\Games\Heartslav\Game;
+use Bga\GameFramework\States\PossibleAction;
+use Bga\GameFramework\States\GameState;
 
 class PlayerTurn extends GameState
 {
-    function __construct(
-        protected Game $game,
-    ) {
-        parent::__construct($game,
-            id: 10,
-            type: StateType::ACTIVE_PLAYER,
-            description: clienttranslate('${actplayer} must play a card or pass'),
-            descriptionMyTurn: clienttranslate('${you} must play a card or pass'),
+    public function __construct(protected Game $game)
+    {
+        parent::__construct(
+            $game,
+            id: 31,
+            type: StateType::ACTIVE_PLAYER, // This state type means that one player is active and can do actions
+            description: clienttranslate('${actplayer} must play a card'), // We tell OTHER players what they are waiting for
+            descriptionMyTurn: clienttranslate('${you} must play a card'), // We tell the ACTIVE player what they must do
+            // We suround the code with clienttranslate() so that the text is sent to the client for translation (this will enable the game to support other languages)
         );
     }
 
-    /**
-     * Game state arguments, example content.
-     *
-     * This method returns some additional information that is very specific to the `PlayerTurn` game state.
-     */
-    public function getArgs(): array
+    #[PossibleAction] // a PHP attribute that tells BGA "this method describes a possible action that the player could take", so that you can call that action from the front (the client)
+    public function actPlayCard(int $cardId, int $activePlayerId)
     {
-        // Get some values from the current game situation from the database.
+        $game = $this->game;
+        $card = $game->cards->getCard($cardId);
+        if (!$card) {
+            throw new \BgaSystemException("Invalid move");
+        }
+        // Rule checks
 
-        return [
-            "playableCardsIds" => [1, 2],
-        ];
-    }    
-
-    /**
-     * Player action, example content.
-     *
-     * In this scenario, each time a player plays a card, this method will be called. This method is called directly
-     * by the action trigger on the front side with `bgaPerformAction`.
-     *
-     * @throws BgaUserException
-     */
-    #[PossibleAction]
-    public function actPlayCard(int $card_id, int $activePlayerId, array $args)
-    {
-        // check input values
-        $playableCardsIds = $args['playableCardsIds'];
-        if (!in_array($card_id, $playableCardsIds)) {
-            throw new \BgaUserException('Invalid card choice');
+        // Check that player has this card in hand
+        if ($card['location'] != "hand") {
+            throw new \BgaUserException(
+                clienttranslate('You do not have this card in your hand')
+            );
+        }
+        $currentTrickColor = $game->getGameStateValue('trickColor');
+        // Check that player follows suit if possible
+        if ($currentTrickColor != 0) {
+            $has_suit = false;
+            $hand_cards = $game->cards->getCardsInLocation('hand', $activePlayerId);
+            foreach ($hand_cards as $hand_card) {
+                if ($hand_card['type'] == $currentTrickColor) {
+                    $has_suit = true;
+                    break;
+                }
+            }
+            if ($has_suit && $card['type'] != $currentTrickColor) {
+                throw new \BgaUserException(
+                    clienttranslate('You must follow suit')
+                );
+            }
         }
 
-        // Add your game logic to play a card here.
-        $card_name = Game::$CARD_TYPES[$card_id]['card_name'];
 
-        // Notify all players about the card played.
-        $this->notify->all("cardPlayed", clienttranslate('${player_name} plays ${card_name}'), [
-            "player_id" => $activePlayerId,
-            "player_name" => $this->game->getPlayerNameById($activePlayerId), // remove this line if you uncomment notification decorator
-            "card_name" => $card_name, // remove this line if you uncomment notification decorator
-            "card_id" => $card_id,
-            "i18n" => ['card_name'], // remove this line if you uncomment notification decorator
-        ]);
-
-        // in this example, the player gains 1 points each time he plays a card
-        $this->playerScore->inc($activePlayerId, 1);
-
-        // at the end of the action, move to the next state
+        $game->cards->moveCard($cardId, 'cardsontable', $activePlayerId);
+        // TODO: check rules here
+        $currentCard = $game->cards->getCard($cardId);
+        $currentTrickColor = $game->getGameStateValue('trickColor');
+        if ($currentTrickColor == 0) $game->setGameStateValue('trickColor', $currentCard['type']);
+        // And notify
+        $game->notify->all(
+            'playCard',
+            clienttranslate('${player_name} plays ${value_displayed} ${color_displayed}'),
+            [
+                'i18n' => array('color_displayed', 'value_displayed'),
+                'card' => $currentCard,
+                'player_id' => $activePlayerId,
+                'player_name' => $game->getActivePlayerName(),
+                'value_displayed' => $game->card_types['types'][$currentCard['type_arg']]['name'],
+                'color_displayed' => $game->card_types['suites'][$currentCard['type']]['name']
+            ]
+        );
         return NextPlayer::class;
     }
 
-    /**
-     * Player action, example content.
-     *
-     * In this scenario, each time a player pass, this method will be called. This method is called directly
-     * by the action trigger on the front side with `bgaPerformAction`.
-     */
-    #[PossibleAction]
-    public function actPass(int $activePlayerId)
+    public function zombie(int $playerId)
     {
-        // Notify all players about the choice to pass.
-        $this->notify->all("pass", clienttranslate('${player_name} passes'), [
-            "player_id" => $activePlayerId,
-            "player_name" => $this->game->getPlayerNameById($activePlayerId), // remove this line if you uncomment notification decorator
-        ]);
-
-        // in this example, the player gains 1 energy each time he passes
-        $this->game->playerEnergy->inc($activePlayerId, 1);
-
-        // at the end of the action, move to the next state
+        $game = $this->game;
+        // Auto-play a random card from player's hand
+        $cards_in_hand = $game->cards->getCardsInLocation('hand', $playerId);
+        if (count($cards_in_hand) > 0) {
+            $card_to_play = $cards_in_hand[array_rand($cards_in_hand)];
+            $game->cards->moveCard($card_to_play['id'], 'cardsontable', $playerId);
+            // Notify
+            $game->notify->all(
+                'playCard',
+                clienttranslate('${player_name} auto plays ${value_displayed} ${color_displayed}'),
+                [
+                    'i18n' => array('color_displayed', 'value_displayed'),
+                    'card' => $card_to_play,
+                    'player_id' => $playerId,
+                    'value_displayed' => $game->card_types['types'][$card_to_play['type_arg']]['name'],
+                    'color_displayed' => $game->card_types['suites'][$card_to_play['type']]['name']
+                ]
+            );
+        }
         return NextPlayer::class;
-    }
-
-    /**
-     * This method is called each time it is the turn of a player who has quit the game (= "zombie" player).
-     * You can do whatever you want in order to make sure the turn of this player ends appropriately
-     * (ex: play a random card).
-     * 
-     * See more about Zombie Mode: https://en.doc.boardgamearena.com/Zombie_Mode
-     *
-     * Important: your zombie code will be called when the player leaves the game. This action is triggered
-     * from the main site and propagated to the gameserver from a server, not from a browser.
-     * As a consequence, there is no current player associated to this action. In your zombieTurn function,
-     * you must _never_ use `getCurrentPlayerId()` or `getCurrentPlayerName()`, 
-     * but use the $playerId passed in parameter and $this->game->getPlayerNameById($playerId) instead.
-     */
-    function zombie(int $playerId) {
-        // Example of zombie level 0: return NextPlayer::class; or $this->actPass($playerId);
-
-        // Example of zombie level 1:
-        $args = $this->getArgs();
-        $zombieChoice = $this->getRandomZombieChoice($args['playableCardsIds']); // random choice over possible moves
-        return $this->actPlayCard($zombieChoice, $playerId, $args); // this function will return the transition to the next state
     }
 }

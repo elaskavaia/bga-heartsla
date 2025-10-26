@@ -77,7 +77,8 @@ define([
           `
     <div class="playertable whiteblock playertable_${index}">
         <div class="playertablename" style="color:#${player.color};">${player.name}</div>
-        <div id="tableau_${player.id}"></div>
+        <div id="cardswon_${player.id}" class="cardswon"></div>
+        <div id="tableau_${player.id}" class="tableau"></div>
     </div>
     `
         );
@@ -112,14 +113,18 @@ define([
       // create the stock, in the game setup
       this.handStock = new BgaCards.HandStock(
         this.cardsManager,
-        document.getElementById("myhand")
+        document.getElementById("myhand"),
+        {
+          sort: BgaCards.sort("type", "type_arg"),
+        }
       );
       this.handStock.setSelectionMode("single");
       this.handStock.onCardClick = (card) => {
-        alert("boom!");
+        this.onCardClick(card);
       };
 
       // Cards in player's hand
+      const handCards = Array.from(Object.values(this.gamedatas.hand));
       this.handStock.addCards(Array.from(Object.values(this.gamedatas.hand)));
 
       // map stocks
@@ -131,8 +136,26 @@ define([
           this.cardsManager,
           document.getElementById(`tableau_${player.id}`)
         );
+        stock.setSelectionMode("none");
         this.tableauStocks[player.id] = stock;
+
+        // add void stock
+        new BgaCards.VoidStock(
+          this.cardsManager,
+          document.getElementById(`cardswon_${player.id}`),
+          {
+            fadeOut: true, // not working
+            toPlaceholder: "shrink", // not working
+            autoPlace: (card) =>
+              card.location === "cardswon" && card.location_arg == player.id,
+          }
+        );
       });
+
+      // for (let i in handCards) {
+      //   this.tableauStocks[this.player_id].addCards([handCards[i]]);
+      //   if (i > 3) break;
+      // }
 
       // Cards played on table
       for (i in this.gamedatas.cardsontable) {
@@ -204,22 +227,7 @@ define([
 
       if (this.isCurrentPlayerActive()) {
         switch (stateName) {
-          case "PlayerTurn":
-            const playableCardsIds = args.playableCardsIds; // returned by the argPlayerTurn
-
-            // Add test action buttons in the action status bar, simulating a card click:
-            playableCardsIds.forEach((cardId) =>
-              this.statusBar.addActionButton(
-                _("Play card with id ${card_id}").replace("${card_id}", cardId),
-                () => this.onCardClick(cardId)
-              )
-            );
-
-            this.statusBar.addActionButton(
-              _("Pass"),
-              () => this.bgaPerformAction("actPass"),
-              { color: "secondary" }
-            );
+          case "playerTurn":
             break;
         }
       }
@@ -251,15 +259,24 @@ define([
 
     // Example:
 
-    onCardClick: function (card_id) {
-      console.log("onCardClick", card_id);
-
-      this.bgaPerformAction("actPlayCard", {
-        card_id,
-      }).then(() => {
-        // What to do after the server call if it succeeded
-        // (most of the time, nothing, as the game will react to notifs / change of state instead)
-      });
+    onCardClick: function (card) {
+      console.log("onCardClick", card);
+      if (!card) return; // hmm
+      switch (this.gamedatas.gamestate.name) {
+        case "PlayerTurn":
+          // Can play a card
+          this.bgaPerformAction("actPlayCard", {
+            cardId: card.id, // this corresponds to the argument name in php, so it needs to be exactly the same
+          });
+          break;
+        case "GiveCardTurn":
+          // Can give cards TODO
+          break;
+        default: {
+          this.handStock.unselectAll();
+          break;
+        }
+      }
     },
 
     ///////////////////////////////////////////////////
@@ -283,19 +300,27 @@ define([
 
     // TODO: from this point and below, you can write your game notifications handling methods
 
-    /*
-        Example:
-        
-        notif_cardPlayed: async function( args )
-        {
-            console.log( 'notif_cardPlayed' );
-            console.log( args );
-            
-            // Note: args contains the arguments specified during you "notifyAllPlayers" / "notifyPlayer" PHP call
-            
-            // TODO: play the card in the user interface.
-        },    
-        
-        */
+    notif_newHand: function (args) {
+      // We received a new full hand of 13 cards.
+      this.handStock.removeAll();
+      this.handStock.addCards(Array.from(Object.values(args.cards)));
+    },
+
+    notif_playCard: function (args) {
+      // Play a card on the table
+      this.tableauStocks[args.player_id].addCards([args.card]);
+    },
+
+    notif_trickWin: async function () {
+      // We do nothing here (just wait in order players can view the 4 cards played before they're gone)
+    },
+    notif_giveAllCardsToPlayer: async function (args) {
+      // Move all cards on table to given table, then destroy them
+      const winner_id = args.player_id;
+
+      const cards = Array.from(Object.values(args.cards));
+      await this.tableauStocks[winner_id].addCards(cards);
+      await this.cardsManager.placeCards(cards); // auto-placement
+    },
   });
 });

@@ -1159,7 +1159,7 @@ So the function is async means it will return Promise. We are doing it so we can
 First we adding cards to player tableau, waiting for animation, then adding to our void stock where they are dissapear.
 
 Now after the trick you see all cards move towards the "player's stash".
-The animation is not ideal, so lets at void stock settings to see if can improve it: https://x.boardgamearena.net/data/game-libs/bga-cards/1.0.7/docs/interfaces/stocks_void-stock.AddCardToVoidStockSettings.html
+The animation is not ideal, so lets at void stock settings to see if can improve it: https://x.boardgamearena.net/data/game-libs/bga-cards/1.0.7/docs/classes/stocks_void-stock.VoidStock.html
 Ok, well I could not figure it out, but now you know where docs for these components are.
 We will do our CSS hack, in .css add:
 
@@ -1486,8 +1486,22 @@ On client side in .js file replace onEnteringState method with this code:
 </pre>  
 And ALSO remove this.handStock.setSelectionMode("single") line from setup method, because it does not work there for some reason.
 
+==Fix first player one with 2 club==
 
+Find the comment 
+ // FIXME: first player one with 2 of clubs
+and replace with this code:
+ // first player one with 2 of clubs
+ $first_player = $this->game->getUniqueValueFromDb("SELECT card_location_arg FROM card WHERE card_location = 'hand' AND card_type = 3 AND card_type_arg = 2");// 2 of clubs
 
+ Then we can uncomment our code for getPlayableCards in Game.php
+        //Check whether the first card of the hand has been played or not
+        $total_played = $this->cards->countCardInLocation('cardswon') + $this->cards->countCardInLocation('cardsontable');
+        if ($total_played == 0) {
+            // No cards have been played yet, find and return the starter card only
+            foreach ($hand as $card) if ($card['type'] == 3 && $card['type_arg'] == 2) return [$card['id']]; // 2 of clubs
+            return $all_ids; // should not happen
+        } else
 
 ==Spectator support==
 Spectator is not a real player but they can watch the game. Most games will require special spectator support, its one of the steps in the alpha testing check list.
@@ -1498,16 +1512,27 @@ In .js file in setup function add this code (after DOM is created):
       if (this.isSpectator)
         document.getElementById("myhand_wrap").style.display = "none";
 
+==Improve UI==
+
+We need to fix few things in UI still.
+First let fix the players tables - to make it centered.
+In .css file find #player-tables and change it to this:
+
+ #player-tables {
+  position: relative;
+  width: calc(var(--h-tableau-width) * 3.8);
+  height: calc(var(--h-tableau-height) * 2.4);
+  margin: auto; // that is cheap way to make it centered
+ }
+
 
 ==Additional stuff==
 
 The following things were not implemented and can add them yourself by looking at the code of original hearts game:
 
 
-*Rule checking and rule enforcements in actPlayCard function
 *Start scoring with 100 points each and end when <= 0
 *Fix scoring rules with Q of spades and 26 point reverse scoring
-*First player one with 2 club
 *Add progress handling
 *Add statistics
 *Add card exchange states

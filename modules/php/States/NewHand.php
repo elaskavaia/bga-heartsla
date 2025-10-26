@@ -24,6 +24,7 @@ class NewHand extends GameState
     public function onEnteringState()
     {
         $game = $this->game;
+        $this->game->setGameStateValue('trick_color', 0);
         // Take back all cards (from any location => null (any)) to deck
         $game->cards->moveAllCardsInLocation(null, "deck");
         $game->cards->shuffle('deck');
@@ -35,10 +36,9 @@ class NewHand extends GameState
             // Notify player about his cards
             $this->notify->player($player_id, 'newHand', '', ['cards' => $cards]);
         }
-        // reset trick color
-        $this->game->setGameStateInitialValue('trick_color', 0);
-        // FIXME: first player one with 2 of clubs
-        $first_player = (int) $this->game->getActivePlayerId();
+
+        // first player one with 2 of clubs
+        $first_player = $this->game->getUniqueValueFromDb("SELECT card_location_arg FROM card WHERE card_location = 'hand' AND card_type = 3 AND card_type_arg = 2");// 2 of clubs
         $this->game->gamestate->changeActivePlayer($first_player);
         return PlayerTurn::class;
     }

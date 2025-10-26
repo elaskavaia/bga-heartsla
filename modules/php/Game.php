@@ -260,14 +260,13 @@ class Game extends \Bga\GameFramework\Table
 
         if ($this->cards->getCardsInLocation('cardsontable', $player_id)) return []; // Already played a card
 
-        // Check whether the first card of the hand has been played or not
-        // $total_played = $this->cards->countCardInLocation('cardswon') + $this->cards->countCardInLocation('cardsontable');
-        // if ($total_played == 0) {
-        //     // No cards have been played yet, find and return the starter card only
-        //     foreach ($hand as $card) if ($card['type'] == 3 && $card['type_arg'] == 2) return [$card['id']]; // 2 of clubs
-        //     return [];
-        // } else
-        if (!$currentTrickColor) { // First card of the trick
+        //Check whether the first card of the hand has been played or not
+        $total_played = $this->cards->countCardInLocation('cardswon') + $this->cards->countCardInLocation('cardsontable');
+        if ($total_played == 0) {
+            // No cards have been played yet, find and return the starter card only
+            foreach ($hand as $card) if ($card['type'] == 3 && $card['type_arg'] == 2) return [$card['id']]; // 2 of clubs
+            return $all_ids; // should not happen
+        } else if (!$currentTrickColor) { // First card of the trick
             if ($broken_heart) {
                 return $all_ids; // Broken Heart or no limitation, can play any card
             } else {

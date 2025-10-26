@@ -59,6 +59,7 @@
   position: relative;
   width: calc(var(--h-tableau-width) * 3.8);
   height: calc(var(--h-tableau-height) * 2.4);
+  margin: auto;
 }
 
 .playertablename {
@@ -99,11 +100,9 @@
   background-image: url("img/cards.jpg");
 }
 
-
 .playertable .ha-card ~ .ha-card {
-    margin-left: calc(var(--h-card-width) * -0.8);
+  margin-left: calc(var(--h-card-width) * -0.8);
 }
-
 
 .cardswon > .ha-card {
   position: absolute;

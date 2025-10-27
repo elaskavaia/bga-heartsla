@@ -82,11 +82,19 @@ define([
     </div>
     `
         );
+
+        document.getElementById(
+          `player_panel_content_${player.color}`
+        ).innerHTML = `
+           <div id="otherhand_${player.id}" class="otherhand"><i class="fa fa-hand-paper-o"></i></div>
+         `;
       });
 
       // Hide hand zone from spectators
       if (this.isSpectator)
         document.getElementById("myhand_wrap").style.display = "none";
+
+      // Set up your game interface here, according to "gamedatas"
 
       // create the animation manager, and bind it to the `game.bgaAnimationsActive()` function
       this.animationManager = new BgaAnimations.Manager({
@@ -119,7 +127,7 @@ define([
         this.cardsManager,
         document.getElementById("myhand"),
         {
-          sort: BgaCards.sort("type", "type_arg"),
+          sort: (a, b) => a.type - b.type || a.type_arg - b.type_arg,
         }
       );
 
@@ -134,41 +142,21 @@ define([
       // map stocks
 
       this.tableauStocks = [];
-      Object.values(gamedatas.players).forEach((player, index) => {
+      Object.values(gamedatas.players).forEach((player) => {
+        const playerId = player.id;
         // add player tableau stock
-        const stock = new BgaCards.LineStock(
+        this.tableauStocks[playerId] = new BgaCards.LineStock(
           this.cardsManager,
-          document.getElementById(`tableau_${player.id}`)
-        );
-
-        this.tableauStocks[player.id] = stock;
-
-        // add void stock
-        new BgaCards.VoidStock(
-          this.cardsManager,
-          document.getElementById(`cardswon_${player.id}`),
-          {
-            fadeOut: true, // not working
-            toPlaceholder: "shrink", // not working
-            autoPlace: (card) =>
-              card.location === "cardswon" && card.location_arg == player.id,
-          }
+          document.getElementById(`tableau_${playerId}`)
         );
       });
-
-      // for (let i in handCards) {
-      //   this.tableauStocks[this.player_id].addCards([handCards[i]]);
-      //   if (i > 3) break;
-      // }
 
       // Cards played on table
       for (i in this.gamedatas.cardsontable) {
         var card = this.gamedatas.cardsontable[i];
         var player_id = card.location_arg;
-        this.tableauStocks[player_id].addCards([card]);
+        this.tableauStocks[player_id].addCard(card);
       }
-
-      // TODO: Set up your game interface here, according to "gamedatas"
 
       // Setup game notifications to handle (see "setupNotifications" method below)
       this.setupNotifications();
@@ -191,7 +179,7 @@ define([
 
             const playableCardIds = args.args._private.playableCards.map((x) =>
               parseInt(x)
-            ); 
+            );
 
             const allCards = this.handStock.getCards();
             const playableCards = allCards.filter(
@@ -312,21 +300,32 @@ define([
       this.handStock.addCards(Array.from(Object.values(args.cards)));
     },
 
-    notif_playCard: function (args) {
+    notif_playCard: async function (args) {
       // Play a card on the table
-      this.tableauStocks[args.player_id].addCards([args.card]);
+      const playerId = args.player_id;
+      let settings = {};
+      if (playerId != this.player_id) {
+        settings = {
+          fromElement: $(`otherhand_${playerId}`),
+          toPlaceholder: "grow",
+        };
+      }
+      await this.tableauStocks[playerId].addCard(args.card, settings);
     },
 
     notif_trickWin: async function () {
       // We do nothing here (just wait in order players can view the 4 cards played before they're gone)
     },
     notif_giveAllCardsToPlayer: async function (args) {
-      // Move all cards on table to given table, then destroy them
-      const winner_id = args.player_id;
+      // Move all cards from notification to dedicated player area and fade out
+      const playerId = args.player_id;
 
       const cards = Array.from(Object.values(args.cards));
-      await this.tableauStocks[winner_id].addCards(cards);
-      await this.cardsManager.placeCards(cards); // auto-placement
+      await this.tableauStocks[playerId].addCards(cards);
+      await this.tableauStocks[playerId].removeCards(cards, {
+        fadeOut: true,
+        slideTo: $(`otherhand_${playerId}`),
+      });
     },
   });
 });

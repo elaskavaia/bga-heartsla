@@ -1362,8 +1362,8 @@ You can implement these rules in the '''actPlayCard''' function of '''PlayerTurn
 
 </pre>
 You can try to play wrong card now and you will see error!
-But you noticed we broke the zombie mode as you cannot play random card anymore and now user cannot play ANY card, there are only some cards they can play but we don't show this information which is annoying.
-To fix this we can add a helper function that will return list of playable cards for given player.
+But you noticed we broke the zombie mode as you cannot play random card anymore and now uThe user cannot play ANY card, there are only some cards they can play but we don't show this information which is annoying.
+To fix this we can add a helper function that will return a list of playable cards for a given player.
 Add these functions in '''Game.php''' file:
 <pre>
     function getPlayableCards($player_id): array
@@ -1422,7 +1422,7 @@ Add these functions in '''Game.php''' file:
 
 </pre>
 
-Now we can use this function in zombie function of '''PlayerTurn.php''' to pick random playable card:
+Now we can use this function in the zombie function of '''PlayerTurn.php''' to pick a random playable card:
 <pre>
     public function zombie(int $playerId)
     {
@@ -1432,7 +1432,7 @@ Now we can use this function in zombie function of '''PlayerTurn.php''' to pick 
     }
 </pre>
 
-And we can significanly simply our rule check at actPlayCard
+And we can significantly simplify our rule check at actPlayCard
 <pre>
         $game = $this->game;
         $currentCard = $game->cards->getCard($cardId);
@@ -1446,7 +1446,7 @@ And we can significanly simply our rule check at actPlayCard
         }
 
 </pre>
-Finally we can send this to client via state args so user can see what moves are valid:
+Finally we can send this to the client via state args so the user can see what moves are valid:
 In '''PlayerTurn.php''' add this method:
 <pre>
     public function getArgs(int $activePlayerId): array
@@ -1461,7 +1461,7 @@ In '''PlayerTurn.php''' add this method:
         ];
     }    
 </pre>
-On client side in .js file replace onEnteringState method with this code:
+On the client side in the .js file replace the onEnteringState method with this code:
 <pre>
     onEnteringState: function (stateName, args) {
       console.log("Entering state: " + stateName, args);
@@ -1484,9 +1484,10 @@ On client side in .js file replace onEnteringState method with this code:
       }
     },
 </pre>  
-And ALSO remove this.handStock.setSelectionMode("single") line from setup method, because it does not work there for some reason.
+And ALSO remove the this.handStock.setSelectionMode("single") line from the setup method. If you leave it there it won't work as this is async function that collide with our other async
+functions that we are using in the onEnteringState
 
-==Fix first player one with 2 club==
+==Fix first player with 2 of clubs==
 
 Find the comment 
  // FIXME: first player one with 2 of clubs
@@ -1494,7 +1495,7 @@ and replace with this code:
  // first player one with 2 of clubs
  $first_player = $this->game->getUniqueValueFromDb("SELECT card_location_arg FROM card WHERE card_location = 'hand' AND card_type = 3 AND card_type_arg = 2");// 2 of clubs
 
- Then we can uncomment our code for getPlayableCards in Game.php
+ Then we can uncomment our code for getPlayableCards in Game.php:
         //Check whether the first card of the hand has been played or not
         $total_played = $this->cards->countCardInLocation('cardswon') + $this->cards->countCardInLocation('cardsontable');
         if ($total_played == 0) {
@@ -1504,31 +1505,98 @@ and replace with this code:
         } else
 
 ==Spectator support==
-Spectator is not a real player but they can watch the game. Most games will require special spectator support, its one of the steps in the alpha testing check list.
-In this game its pretty simple, we just hide the hand control in client
+A spectator is not a real player but they can watch the game. Most games will require special spectator support, it's one of the steps in the alpha testing checklist.
+In this game it's pretty simple, we just hide the hand control in the client
 
-In .js file in setup function add this code (after DOM is created):
+In the .js file in the setup function add this code (after DOM is created):
       // Hide hand zone from spectators
       if (this.isSpectator)
         document.getElementById("myhand_wrap").style.display = "none";
 
 ==Improve UI==
+We need to fix a few things in the UI still.
 
-We need to fix few things in UI still.
-First let fix the players tables - to make it centered.
-In .css file find #player-tables and change it to this:
+===Center Player Areas===
+First let's fix the player tables - to make them centered.
+In the .css file find #player-tables and change it to this:
 
  #player-tables {
   position: relative;
   width: calc(var(--h-tableau-width) * 3.8);
   height: calc(var(--h-tableau-height) * 2.4);
-  margin: auto; // that is cheap way to make it centered
+  margin: auto; // that is a cheap way to make it centered
  }
 
+===Better Card Play Animations===
+When another player plays a card it kind of just appears on the tableau, we want to make it look like it's coming from the player hand.
+We don't actually have any sort of UI location to have a player hand - but we can either put it on the mini player panel or add it to the bottom of the player areas.
+Let's try to put this on the mini player panels.
+First we need to add a node in the DOM on the player panel and maybe add an icon to represent the hand.
+We have access to some BGA icons and font awesome https://fontawesome.com/v4/icons/
+In the .js file in the template for player tableau and add this at the end of the forEach body:
+         document.getElementById(`player_panel_content_${player.color}`).innerHTML = `
+           <div id="otherhand_${player.id}" class="otherhand"><i class="fa fa-hand-paper-o"></i></div>
+         `;
+
+In the .js file replace the notif handler for play with this:
+    notif_playCard: async function (args) {
+      // Play a card on the table
+      const playerId = args.player_id;
+      let settings = {};
+      if (playerId != this.player_id) {
+        settings = {
+          fromElement: $(`otherhand_${playerId}`),
+          toPlaceholder: "grow",
+        };
+      }
+      await this.tableauStocks[playerId].addCard(args.card, settings);
+    },
+
+What we did here is added a settings parameter for card placement - for cases where it's not our own card to move it from the "hand" area on the mini player board.
+Reload and test (use the autoPlay feature to see the animation when the "other" player plays the card).
+
+Now we can also replace the void stock we create with animation to the same "otherhand" area:
+    notif_giveAllCardsToPlayer: async function (args) {
+      // Move all cards from notification to dedicated player area and fade out
+      const playerId = args.player_id;
+
+      const cards = Array.from(Object.values(args.cards));
+      await this.tableauStocks[playerId].addCards(cards);
+      await this.tableauStocks[playerId].removeCards(cards, {
+        fadeOut: true,
+        slideTo: $(`otherhand_${playerId}`),
+      });
+    },
+
+And in this case we don't really need VoidStock anymore, we can remove it
+Delete this
+        // add void stock
+        new BgaCards.VoidStock(
+          this.cardsManager,
+          document.getElementById(`cardswon_${playerId}`),
+          {
+            fadeOut: true, // not working
+            toPlaceholder: "shrink", // not working
+            autoPlace: (card) =>
+              card.location === "cardswon" && card.location_arg == playerId,
+          }
+        );
+
+===Card Sorting===
+It would be nice to sort the cards in hand by suit and value.
+In the .js file in the setup method when creating stock replace with this: 
+      // create the stock, in the game setup
+      this.handStock = new BgaCards.HandStock(
+        this.cardsManager,
+        document.getElementById("myhand"),
+        {
+          sort: (a, b) => a.type - b.type || a.type_arg - b.type_arg, // sort by suite then by value
+        }
+      );
 
 ==Additional stuff==
 
-The following things were not implemented and can add them yourself by looking at the code of original hearts game:
+The following things were not implemented and you can add them yourself by looking at the code of the original hearts game:
 
 
 *Start scoring with 100 points each and end when <= 0
@@ -1539,7 +1607,7 @@ The following things were not implemented and can add them yourself by looking a
 *Add game option to start with 75 points instead of 100
 
 ==After the tutorial==
-You might want to check another tutorial, or start working on your first real project !
+You might want to check another tutorial, or start working on your first real project!
 
 [[Create a game in BGA Studio: Complete Walkthrough]]
 [[Category:Studio]]

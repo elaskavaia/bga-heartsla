@@ -314,7 +314,7 @@ class Game extends \Bga\GameFramework\Table
     /**
      * Another example of debug function, to easily test the zombie code.
      */
-    public function debug_playAutomatically(int $moves = 50)
+    public function debug_playAutomatically(int $moves = 1)
     {
         $count = 0;
         while (intval($this->gamestate->getCurrentMainStateId()) < 99 && $count < $moves) {
@@ -325,7 +325,9 @@ class Game extends \Bga\GameFramework\Table
             }
         }
     }
-
+    public function debug_playAutomatically1() {
+        return $this->debug_playAutomatically(1);
+    }
     /*
     Another example of debug function, to easily create situations you want to test.
     Here, put a card you want to test in your hand (assuming you use the Deck component).

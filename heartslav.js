@@ -77,7 +77,6 @@ define([
           `
     <div class="playertable whiteblock playertable_${index}">
         <div class="playertablename" style="color:#${player.color};">${player.name}</div>
-        <div id="cardswon_${player.id}" class="cardswon"></div>
         <div id="tableau_${player.id}" class="tableau"></div>
     </div>
     `
@@ -86,7 +85,7 @@ define([
         document.getElementById(
           `player_panel_content_${player.color}`
         ).innerHTML = `
-           <div id="otherhand_${player.id}" class="otherhand"><i class="fa fa-hand-paper-o"></i></div>
+           <div id="otherhand_${player.id}" class="otherhand"><i class="fa fa-window-restore"></i></div>
          `;
       });
 
@@ -118,7 +117,12 @@ define([
           div.dataset.typeArg = card.type_arg; // value 2..14
           div.style.backgroundPositionX = `calc(100% / 14 * (${card.type_arg} - 2))`; // 14 is number of columns in stock image minus 1
           div.style.backgroundPositionY = `calc(100% / 3 * (${card.type} - 1))`; // 3 is number of rows in stock image minus 1
-          this.addTooltipHtml(div.id, `tooltip of ${card.type}`);
+          this.addTooltipHtml(
+            div.id,
+            _(this.gamedatas.card_types.types[card.type_arg].name) +
+              " " +
+              _(this.gamedatas.card_types.suites[card.type].name)
+          );
         },
       });
 
@@ -148,6 +152,11 @@ define([
         this.tableauStocks[playerId] = new BgaCards.LineStock(
           this.cardsManager,
           document.getElementById(`tableau_${playerId}`)
+        );
+        // add tooltips to player hand symbol
+        this.addTooltipHtml(
+          `otherhand_${playerId}`,
+          _("Placehold for player's hand")
         );
       });
 

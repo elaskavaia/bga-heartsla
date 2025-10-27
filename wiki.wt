@@ -1513,6 +1513,8 @@ In the .js file in the setup function add this code (after DOM is created):
       if (this.isSpectator)
         document.getElementById("myhand_wrap").style.display = "none";
 
+Click Test Spectator at the end of player's panels to test this.
+
 ==Improve UI==
 We need to fix a few things in the UI still.
 
@@ -1535,7 +1537,7 @@ First we need to add a node in the DOM on the player panel and maybe add an icon
 We have access to some BGA icons and font awesome https://fontawesome.com/v4/icons/
 In the .js file in the template for player tableau and add this at the end of the forEach body:
          document.getElementById(`player_panel_content_${player.color}`).innerHTML = `
-           <div id="otherhand_${player.id}" class="otherhand"><i class="fa fa-hand-paper-o"></i></div>
+           <div id="otherhand_${player.id}" class="otherhand"><i class="fa fa-window-restore"></i></div>
          `;
 
 In the .js file replace the notif handler for play with this:
@@ -1581,7 +1583,15 @@ Delete this
               card.location === "cardswon" && card.location_arg == playerId,
           }
         );
+Also can delete related css and DOM element cardswon.
 
+
+We can also add this in .css to make this symbol centerd:
+ .otherhand {
+   position: relative;
+   margin: auto;
+   text-align: center;
+ }
 ===Card Sorting===
 It would be nice to sort the cards in hand by suit and value.
 In the .js file in the setup method when creating stock replace with this: 
@@ -1593,15 +1603,44 @@ In the .js file in the setup method when creating stock replace with this:
           sort: (a, b) => a.type - b.type || a.type_arg - b.type_arg, // sort by suite then by value
         }
       );
+Note: BgaCards.sort does not quite work because it cannot handle the fact that our fields are strings (which comes from php notif)
+
+===Tooltips===
+We can add tooltips to cards to show their name.
+In the .js file find where created silly tooltip with addTooltipHtml and replace with this:
+          this.addTooltipHtml(div.id, 
+             _(this.gamedatas.card_types.types[card.type_arg].name)+ " " +
+             _(this.gamedatas.card_types.suites[card.type].name) 
+          );
+Now what is this.gamedatas.card_types? Well that is our "material" of the game which is in our case variable in php, we have to send it to client for this to work.
+Since it never changes we send it in getAllDatas method, add this at the end before return:
+            $result['card_types'] = $this->card_types;
+
+Of course this is very basic tooltips and not even needed in this game, but in real game your want tooltips everywhere!!!
+Lets add tooltip to our fake hand symbol also (the "otherhand") (in setup method in .js somewhere in forEach loop over players)
+        // add tooltips to player hand symbol
+        this.addTooltipHtml(
+          `otherhand_${playerId}`,
+          _("Placeholder for player's hand")
+        );
+
+==Game progresstion==
+In this game it should be easy, we just need to know if somebody close to -100 points!
+Find getGameProgression in Game.php and replace with this:
+    public function getGameProgression()
+    {
+        $min = $this->playerScore->getMin();
+        return -1 * $min; // we get close to -100 we get close to 100% game completion
+    }
+
 
 ==Additional stuff==
 
 The following things were not implemented and you can add them yourself by looking at the code of the original hearts game:
 
-
+*Mark player who started the hand and add log about what is starting Suite of the trick
 *Start scoring with 100 points each and end when <= 0
 *Fix scoring rules with Q of spades and 26 point reverse scoring
-*Add progress handling
 *Add statistics
 *Add card exchange states
 *Add game option to start with 75 points instead of 100

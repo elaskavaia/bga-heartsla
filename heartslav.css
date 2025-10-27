@@ -108,3 +108,8 @@
   position: absolute;
   top: 0 !important;
 }
+.otherhand {
+  position: relative;
+  margin: auto;
+  text-align: center;
+}

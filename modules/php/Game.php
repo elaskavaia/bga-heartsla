@@ -110,9 +110,8 @@ class Game extends \Bga\GameFramework\Table
      */
     public function getGameProgression()
     {
-        // TODO: compute and return the game progression
-
-        return 0;
+        $min = $this->playerScore->getMin();
+        return -1 * $min; // we get close to -100 we get close to 100% game completion
     }
 
     /**
@@ -175,7 +174,7 @@ class Game extends \Bga\GameFramework\Table
         // Cards played on the table
         $result['cardsontable'] = $this->cards->getCardsInLocation('cardsontable');
 
-
+        $result['card_types'] = $this->card_types;
         return $result;
     }
 
@@ -325,7 +324,8 @@ class Game extends \Bga\GameFramework\Table
             }
         }
     }
-    public function debug_playAutomatically1() {
+    public function debug_playAutomatically1()
+    {
         return $this->debug_playAutomatically(1);
     }
     /*
